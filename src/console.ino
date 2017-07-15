@@ -1,11 +1,11 @@
 #include <SPI.h>
 #include <Wire.h>
-#include "WiFi101.h"
-#include "WiFiUdp.h"
-#include "RTCZero.h"
-#include "Adafruit_GFX.h"
-#include "Adafruit_ILI9341.h"
-#include "SD.h"
+#include <SD.h>
+#include "WiFi101/WiFi101.h"
+#include "WiFi101/WiFiUdp.h"
+#include "RTCZero/RTCZero.h"
+#include "Adafruit_GFX/Adafruit_GFX.h"
+#include "Adafruit_ILI9341/Adafruit_ILI9341.h"
 
 RTCZero rtc;
 
