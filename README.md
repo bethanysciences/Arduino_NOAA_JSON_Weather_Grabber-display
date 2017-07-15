@@ -2,8 +2,8 @@
 
 Console Project  
 ==============================================  
-<img src="opensource.svg" width="20%">  
-<img src="mit.svg" width="20%">  
+<img src="opensource.png" width="20%">  
+<img src="mit.png" width="20%">  
   
 Components  
 ----------------------------------------------  
