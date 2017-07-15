@@ -1,8 +1,10 @@
-<link rel="stylesheet" href="css/modest.css">
-# Console Project  
-<img src="ing/logo-open-source-hardware.svg" width="20%">
-<img src="ing/logo-License-mit.svg" width="20%">
+<link rel="stylesheet" href="modest.css">
 
-
-### Devices  
-
+Console Project  
+==============================================  
+<img src="opensource.svg" width="20%">  
+<img src="mit.svg" width="20%">  
+  
+Components  
+----------------------------------------------  
+  
