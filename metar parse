@@ -1,0 +1,609 @@
+https://aviationweather.gov
+
+/adds/dataserver_current/
+
+https://aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml&hoursBeforeNow=1&stationString=KPDK
+
+http://www.aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml&stationString=EGLL&hoursBeforeNow=1
+
+httpparam?
+dataSource=metars&
+requestType=retrieve&
+format=csv&
+stationString=KDEN&
+hoursBeforeNow=2
+
+http://aviationweather.gov/adds/dataserver_current/httpparam?dataSource=metars&requestType=retrieve&format=xml&stationString=KPDK&hoursBeforeNow=1
+
+
+
+httpparam?
+dataSource=metars&
+requestType=retrieve&
+format=xml&
+stationString=PHTO&
+hoursBeforeNow=4
+
+
+void parseMETAR(String METARresponse) {
+  String station    = "";
+  String dateStamp  = "";
+  String timeStamp  = "";
+  String wind       = "";
+  String visibility = "";
+  String conds      = "";
+  int tempC         = 0;
+  int dewPointC     = 0;
+  int relHumd       = 0;
+  int windChillC    = 0;
+  char *parameter;
+  char str[130]     = " ";
+  String temp_strA  = "";
+  String temp_strB  = "";
+
+  Serial.print("METAR input   ");   Serial.println(METARresponse);
+  int trimEnd = METARresponse.indexOf("METAR");
+  METARresponse.remove(0, trimEnd);
+  Serial.print("METAR trimmed ");   Serial.println(METARresponse);
+
+  metar.toCharArray(str,200);
+  parameter = strtok(str," ");
+
+  temp_strA = strtok(NULL," ");                                   // station
+    station = temp_strA.substring(0,4);
+    Serial.print("station ");         Serial.println(station);
+
+    temp_strA = strtok(NULL," ");                                 // date
+    date = temp_strA.substring(0,2);
+    Serial.print("date ");            Serial.println(date);
+
+    time = temp_strA.substring(2,6);                              // time
+    Serial.print("time (GMT) ");      Serial.println(time);
+
+    wind = strtok(NULL," ");                                      // wind speed
+    Serial.print("wind ");            Serial.println(wind);
+
+    temp_strA = strtok(NULL," ");                                 // visibility
+    if (temp_strA == "////") visibility = "No Report";
+    if (temp_strA == "CAVOK") visibility = "Good";
+    if (temp_strA == "9999") visibility = "Excellent";
+    else visibility = temp_strA;
+    Serial.print("visibility ");      Serial.println(visibility);
+
+    conds = strtok(NULL," ");                                     // conditions
+    Serial.print("conds ");           Serial.println(conds);
+
+    temp_strA = strtok(NULL," ");                                 // temperature
+    if (temp_strA.startsWith("M")) tempC = 0 - temp_strA.substring(1,3).toInt();
+    else tempC = temp_strA.substring(0,2).toInt();
+    Serial.print("tempC ");           Serial.println(tempC);
+
+    temp_strB = temp_strA.substring(temp_strA.indexOf('/')+1);    // dew point
+    if (temp_strB.startsWith("M")) dewPointC = temp_strB.substring(1,3).toInt();
+    else dewPointC = temp_strB.substring(0,2).toInt();
+    Serial.print("dewPointC ");       Serial.println(dewPointC);
+
+    relHumd = 100 * (exp((17.271 * dewPointC) /                   // humidity
+      (237.7 + dewPointC))) /
+      (exp((17.271 * tempC) /
+      (237.7 + tempC))) + 0.5;
+    Serial.print("Rel.Humd ");        Serial.println(relHumd);
+//  }
+}
+
+
+
+
+
+
+
+//http://weather.unisys.com/wxp/Appendices/Formats/METAR.html
+/*
+METAR Format (FM-15)
+Surface Meteorological Airways Format
+
+Syntax:
+METAR CCCC TIME AUTO WIND VISIBILITY WEATHER CLOUDS TEMP/DEW ALTIMETER REMARKS
+
+METAR
+This defines the product type.  This can either be the string "METAR" for a regularly reported observation (such as an hourly) or "SPECI" for a special observation.
+
+CCCC
+CCCC is the 4 letter ID uniquely defining the reporting station, for example KORD for O'Hare airport in Chicago.
+
+TIME
+The full universal time (UTC) that the observation was taken.  The format is: ddhhmmZ.
+
+dd is the day of the month, hh is the hour, mm is the minute.
+
+AUTO
+This is an optional grouping used to specify a station as being automated.
+
+WIND The wind group
+dddssKT or dddssGggKT
+
+The value ddd is the wind direction in degrees.  The value ss is the wind speed.  The units are defined by the string "KT" which is knots. Some reports may have "MPS" for meters per second. If wind gusts are reported, they are specified with the group "Ggg".
+
+VISIBILITY The visibility group
+vvSM or vvKM
+
+This specifies the visibility is either statue miles "SM" or kilometers "KM".  The visibility can be partial values such as "1 1/2SM" or "3/16SM".
+
+WEATHER The weather group
+iiddppooxx
+ii is intensity group
+ii	Description
+-	light
+moderate
++	heavy
+VC	in the vicinity
+dd is the descriptor group
+dd	Description
+MI	shallow
+PR	partial
+BC	patches
+DR	low drifting
+BL	blowing
+SH	shower
+TS	thunderstorm
+FZ	freezing
+pp is the precipitation group
+pp	Description
+DZ	drizzle
+RA	rain
+SN	snow
+SG	snow grains
+IC	ice crystals
+PE	ice pellets
+GR	hail
+GS	small hail/snow pellets
+UP	unknown
+oo is the obscuration group
+oo	Description
+BR	mist
+FG	fog
+FU	smoke
+VA	volcanic ash
+DU	dust
+SA	sand
+HZ	haze
+PY	spray
+xx is the misc group
+xx	Description
+PO	dust whirls
+SQ	squalls
+FC	funnel cloud/tornado/waterspout
+SS	duststorm
+
+CLOUDS The cloud levels
+ccchhhtt
+ccc is the coverage
+CLR or SKC = clear
+FEW = 1/8 coverage
+SCT = 2,3,4/8 coverage
+BKN = 5,6,7/8 coverage
+OVC = overcast
+VV = vertical visibility for obscuration
+
+hhh is the height of base in 30m or 100ft increments. ie 30 = 3000 feet
+
+tt is an optional type
+CU = cumulus
+CB = cumulonumbus
+TCU = towering cumulus
+CI = cirrus
+
+CAVOK = clear skies, unlimited visibility
+
+TEMP/DEW is the temperature and dewpoint in Celsius
+TT/DD
+negative values are preceded with a M (M03 = -3)
+
+ALTIMETER
+is the altimeter setting
+Qpppp = altimeter in whole mb
+Apppp = altimeter in .01 in Hg
+
+REMARKS
+The remark section:
+
+RMK xxxx xxxx xxxx...
+Remark	Description
+AO1	AMOS station
+AO2	ASOS station
+OBS TAKEN +xx	minute offset for observation time
+SLPppp	Sea level pressure in .1 mb (142 = 1014.2 mb)
+WEA:www	Additional present weather information
+Tttttdddd	Current temperature/dewpoint in .1C
+T01720144 = temp=17.2C, dew=14.4C, first digit 1 for negative
+1xxxx	6 hour max temp in .1C, first digit 1 for negative
+2nnnn	6 hour min temp in .1C, first digit 1 for negative
+4/sss	Snow coverage in inches
+4xxxxnnnn	24 hour max/min temps in .1C, first digit 1 for negative
+5tppp	Pressure tendency in .1 mb for 3 hours, t is the trend
+6pppp	6 hour precipitation in .01 inches
+7pppp	24 hour precipitation in .01 inches
+8/lmh	Cloud type for low, medium, high
+933sss	New snow coverage, water equivalent
+98mmm	Equivalent sunshine for day in minutes
+CITY tt	City temperature
+PCPN pppp
+Ppppp	1 hour precipitation
+PK WND sss/nn	Peak wind, sss is speed, nn is the time
+PRESFR	Pressure falling rapidly
+PRESRR	Pressure rising rapidly
+SNOINCR xxx	Snow increasing rapidly, where xxx is amount of snow in last hour
+WSHFT nn	Wind shift at time nn
+Examples
+
+CCCC	TIME	  WIND	   VIS	  WEA	  CLOUD	  TT/DD	  ALT	REMARKS
+KLAF	030445Z	35007KT	 15SM		SKC	          17/13	  A2986
+KLAF = Station Identifier
+030445Z = Time (ddhhmmZ)
+35007KT = Winds (350 deg at 7 knots)
+15SM = Visibility (15 statute miles)
+SKC = Clear skies
+17/13 = Temperature/Dewpoint in Celsius
+A2986 = Altimieter setting (29.86 in Hg)
+
+CCCC	TIME	  WIND  VIS	    WEA	      CLOUD	  TT/DD	ALT	REMARKS
+KLAF	021915Z COR   22010KT	7SM	TSRA	BKN055	30/17	A2974	RMK T W MOVG NE
+TSRA = Weather (TS-Thunderstorm RA-Rain)
+BKN055 = Cloud level (Broken at 5500 feet)
+
+CCCC	TIME	  WIND	   VIS	WEA	CLOUD	        TT/DD	ALT	  REMARKS
+KLAF	021950Z	30008KT	 7SM	-RA	BKN065CB	    25/21	A297	RMK TE40
+BKN065CB = Cloud level (Broken at 6500 feet with cumulonimbus)
+
+CCCC	TIME	WIND	VIS	WEA	CLOUD	TT/DD	ALT	REMARKS
+LTCC	022250Z	32003KT			CAVOK	24/10	Q1011	NOSIG=
+CAVOK = Cloud/Visibility (OK=Clear with unlimited visibility)
+Q1011 = Altimeter setting (1011 mb)
+
+CCCC	TIME	WIND	VIS	WEA	CLOUD	TT/DD	ALT	REMARKS
+KFHU	022336Z	33011G25	35SM	TS VCSH	FEW040 SCT060CB BKN100 BKN250	31/14	A3003	RMK WSHFT 27 FRQ LTGICCG TS N MOV W SHRA N AND NE-SE=
+33011G25 = Winds (330 at 11 Gusts to 25)
+TS VCSH = Weather (TS=Thunderstorm, VC=Vicinty, SH=Shower)
+FEW040 = Clouds (FEW=few clouds or 1/8 coverage at 4000 feet)
+
+CCCC	TIME	WIND	VIS	WEA	CLOUD	TT/DD	ALT	REMARKS
+KIND	022356Z	26009KT	10SM		CLR	24/20	A2973	RMK AO2 SLP062 60000 T02440200 10317 20228 56009 $=
+AO2 = ASOS station
+SLP062 = Sea level pressure (062=1006.2 mb)
+60000 = 6 hour precipitation (0000=trace)
+T02440200 = Current temperature/dewpoint (temp=0244=24.4C,dew=0200=20.0C)
+10317 = 6 hour max temp (317=31.7C)
+20228 = 6 hour min temp (228=22.8C)
+56009 = Pressure tendency (6009=falling .9 mb in last 3 hours)
+
+/*
+METARParse - a small ATMEL SAMD library to deconstruct Weather METAR Files
+MIT license
+Meaning of various codes
+Moderate/heavy rain RERA
+Moderate/heavy snow RESN
+Moderate/heavy small hail REGS
+Moderate/heavy snow pellets REGS
+Moderate/heavy ice pellets REPL
+Moderate/heavy hail REGR
+Moderate/heavy snow grains RESG
+Intensity       Description     Precipitation       Obscuration      Other
+-  Light        MI Shallow      DZ Drizzle          BR Mist          PO Well developed dust / sand whirls
+   Moderate     PR Partial      RA Rain             FG Fog           SQ Squalls
++  Heavy        BC Patches      SN Snow             FU Smoke         FC Funnel clouds inc tornadoes or waterspouts
+VC Vicinity     DR Low drifting SG Snow grains      VA Volcanic ash  SS Sandstorm
+BL Blowing      IC Ice crystals DU Widespread dust  DS Duststorm
+SH Showers      PL Ice pellets  SA Sand
+TS Thunderstorm GR Hail         HZ Haze
+FZ Freezing     GS Small hail   PY Spray
+UP Unknown
+*/
+
+int min_val(int num1, int num2) {
+  if(num1 > num2) return num2;
+  else return num1;
+}
+
+float calc_rh(int temp, int dewp) {
+  return 100 * (exp((17.271 * dewp)/(237.7 + dewp))) /
+  (exp((17.271 * temp)/(237.7 + temp))) + 0.5;
+}
+
+float calc_windchill(int temperature, int wind_speed) {
+  float result;
+  wind_speed = wind_speed * 1.852; // Convert to Kph
+  result = 13.12 + 0.6215 * temperature - 11.37 *
+            pow(wind_speed,0.16) + 0.3965 * temperature * pow(wind_speed,0.16);
+  if (result < 0 ) { return result - 0.5; } else { return result + 0.5; }
+}
+
+void Process_secondary_reports(String temp_strA, int line_pos) {
+  temp_strA.trim();
+  if (temp_strA == "NOSIG") Serial.print("No significant change expected");
+  if (temp_strA == "TEMPO") Serial.print("Temporary conditions expected");
+  if (temp_strA == "RADZ")  Serial.print("Recent Rain/Drizzle");
+  if (temp_strA == "RERA")  Serial.print("Recent Moderate/Heavy Rain");
+  if (temp_strA == "REDZ")  Serial.print("Recent Drizzle");
+  if (temp_strA == "RESN")  Serial.print("Recent Moderate/Heavy Snow");
+  if (temp_strA == "RESG")  Serial.print("Recent Moderate/Heavy Snow grains");
+  if (temp_strA == "REGR")  Serial.print("Recent Moderate/Heavy Hail");
+  if (temp_strA == "RETS")  Serial.print("Recent Thunder storms");
+}
+
+String convert_clouds(String source) {
+  String height  = source.substring(3,6);
+  String cloud   = source.substring(0,3);
+  String warning = " ";
+  while (height.startsWith("0")) height = height.substring(1);
+  if (source.endsWith("TCU") || source.endsWith("CB")) {
+    Serial.println("Warning - storm clouds detected");
+    warning = " (storm) ";
+  }
+  if (cloud !="SKC" && cloud != "CLR" && height != " ") height = " at " + height + "00ft";
+  else height = "";
+  if (source == "VV///") return "No cloud reported";
+  if (cloud == "BKN")    return "Broken" + warning + "clouds" + height;
+  if (cloud == "SKC")    return "Clear skies";
+  if (cloud == "FEW")    return "Few" + warning + "clouds" + height;
+  if (cloud == "NCD")    return "No clouds detected";
+  if (cloud == "NSC")    return "No signficiant clouds";
+  if (cloud == "OVC")    return "Overcast" + warning + height;
+  if (cloud == "SCT")    return "Scattered" + warning + "clouds" + height;
+  return "";
+}
+
+String display_conditions(String WX_state) {
+  if (WX_state == "//") return "No weather reported";
+  if (WX_state == "VC") return "Vicinity has";
+  if (WX_state == "BL") return "Blowing";
+  if (WX_state == "SH") return "Showers";
+  if (WX_state == "TS") return "Thunderstorms";
+  if (WX_state == "FZ") return "Freezing";
+  if (WX_state == "UP") return "Unknown";
+  if (WX_state == "MI") return "Shallow";
+  if (WX_state == "PR") return "Partial";
+  if (WX_state == "BC") return "Patches";
+  if (WX_state == "DR") return "Low drifting";
+  if (WX_state == "IC") return "Ice crystals";
+  if (WX_state == "PL") return "Ice pellets";
+  if (WX_state == "GR") return "Hail";
+  if (WX_state == "GS") return "Small hail";
+  if (WX_state == "DZ") return "Drizzle";
+  if (WX_state == "RA") return "Rain";
+  if (WX_state == "SN") return "Snow";
+  if (WX_state == "SG") return "Snow grains";
+  if (WX_state == "DU") return "Widespread dust";
+  if (WX_state == "SA") return "Sand";
+  if (WX_state == "HZ") return "Haze";
+  if (WX_state == "PY") return "Spray";
+  if (WX_state == "BR") return "Mist";
+  if (WX_state == "FG") return "Fog";
+  if (WX_state == "FU") return "Smoke";
+  if (WX_state == "VA") return "Volcanic ash";
+  if (WX_state == "DS") return "Dust storm";
+  if (WX_state == "PO") return "Well developed dust/sand swirls";
+  if (WX_state == "SQ") return "Squalls";
+  if (WX_state == "FC") return "Funnel clouds/Tornadoes";
+  if (WX_state == "SS") return "Sandstorm";
+  return "";
+}
+
+boolean valid_cloud_report(String temp_strA) {
+  if (temp_strA.startsWith("BKN") ||
+     temp_strA.startsWith("CLR") ||
+     temp_strA.startsWith("FEW") ||
+     temp_strA.startsWith("NCD") ||
+     temp_strA.startsWith("NSC") ||
+     temp_strA.startsWith("OVC") ||
+     temp_strA.startsWith("SCT") ||
+     temp_strA.startsWith("SKC") ||
+     temp_strA.endsWith("CB")    ||
+     temp_strA.endsWith("TCU")) {
+     return true;
+  }
+  else return false;
+}
+
+// METAR KPDK 210153Z 00000KT 10SM CLR 23/19 A3004 RMK AO2 SLP156
+
+void parseMETAR(String metar) {
+  Serial.print("METAR  strip "); Serial.println(metar);
+  String product    = "";
+  String station    = "";
+  int temperature   = 0;
+  int dew_point     = 0;
+  int wind_speedKTS = 0;
+  char str[130]     = " ";
+  char *parameter;
+  String conditions_start = " ";
+  String temp_strA  = "";
+  String temp_strB  = "";
+  String temp_Pres  = "";
+  String conditions_test = "+-BDFGHIMPRSTUV";
+
+  metar.toCharArray(str,130);
+  parameter = strtok(str," ");
+
+  while (parameter != NULL) {
+    temp_strA = strtok(NULL," ");                                 // product
+    product = temp_strA.substring(0,5);
+    Serial.print("product ");   Serial.println(product);
+
+    temp_strA = strtok(NULL," ");                                 // product
+    station = temp_strA.substring(0,4));
+    Serial.print("station ");   Serial.println(station);
+
+    temp_strA = strtok(NULL," ");                                 // date
+    date = temp_strA.substring(0,2);
+    Serial.print("date:");    Serial.println(date);
+
+    time = temp_strA.substring(2,6);                              // time
+    Serial.print("time (GMT) ");  Serial.print(time);
+
+    temp_strA = strtok(NULL," ");                                 // wind
+    if (temp_strA == "AUTO") temp_strA = strtok(NULL," ");
+    if (temp_strA == "/////KT") temp_strA = "00000KT";
+    temp_strB = temp_strA.substring(3,5);
+    wind_speedKTS = temp_strB.toInt();
+    int wind_speedMPH = wind_speedKTS * 1.15077 + 0.5;
+    if (temp_strA.indexOf('G') >= 0) temp_strB = temp_strA.substring(8);
+    else temp_strB = temp_strA.substring(5);
+    if (temp_strB == "MPS") temp_strB = "MS";
+    if (wind_speedMPH < 10) Serial.print(String(wind_speedMPH)+" MPH");
+    else Serial.print(String(wind_speedMPH)+" MPH");
+    if (temp_strA.indexOf('G') >= 0) {
+      Serial.print(String(wind_speedKTS));
+      Serial.print("g");
+      Serial.print(temp_strA.substring(temp_strA.indexOf('G') + 1));
+      Serial.print((temp_strA.indexOf('G')+3) + temp_strB);
+    }
+    int wind_direction = 0;
+    if (temp_strA.substring(0,3) == "VRB") Serial.print("VRB");
+    else wind_direction = temp_strA.substring(0,3).toInt() - 90;
+
+    temp_strA = strtok(NULL," ");
+    if (temp_strA == "////") temp_strB= "No Visibility Rep.";
+    else temp_strB = "";
+    if (temp_strA == "CAVOK") Serial.print("Visibility good");
+    else {
+      if (temp_strA != "////") {
+       if (temp_strA == "9999") {temp_strB = "Visibility excellent"; }
+        else {
+          String vis = temp_strA;
+          while (vis.startsWith("0")) vis = vis.substring(1);
+          temp_strB = vis + " Metres of visibility";
+        }
+      }
+    }
+    Serial.print(temp_strB);
+    temp_strA = strtok(NULL," ");
+    if ( temp_strA.startsWith("R") && !temp_strA.startsWith("RA")) temp_strA = strtok(NULL," ");
+    if (temp_strA.length() >= 5 && temp_strA.substring(0,1)!= "+" &&
+                                   temp_strA.substring(0,1)!= "-" &&
+                                   (temp_strA.endsWith("N") ||
+                                   temp_strA.endsWith("S") ||
+                                   temp_strA.endsWith("E") ||
+                                   temp_strA.endsWith("W")) ) {
+      conditions_start = temp_strA.substring(4);
+      conditions_start = conditions_start.substring(0,1);
+      if (conditions_start == "N" || conditions_start == "S" || conditions_start == "E" || conditions_start == "W") {
+        Serial.print("/"+temp_strA+" Mts Visibility");
+      }
+      temp_strA = strtok(NULL," ");
+    }
+    Serial.print("Additional Wx Reports:");
+    conditions_start = temp_strA.substring(0,1);
+    temp_strB = temp_strA.substring(0,3);
+    if ((temp_strA == "//" || conditions_test.indexOf(conditions_start) >= 0)
+        && !(valid_cloud_report(temp_strB))
+        && temp_strB != "NSC"
+        && !temp_strA.startsWith("M0")) {
+      temp_strB = "";
+      if (conditions_start == "-" || conditions_start == "+") {
+        if (conditions_start == "-") temp_strB = "Light ";
+        else temp_strB = "Heavy ";
+        temp_strA = temp_strA.substring(1);
+      }
+      if (temp_strA.length() == 2) Serial.print(temp_strB + display_conditions(temp_strA));
+      else {
+        Serial.print(temp_strB + display_conditions(temp_strA.substring(0,2)));
+        Serial.print("/" + display_conditions(temp_strA.substring(2,4)));
+        if (temp_strA.length() >= 6) Serial.print("/" + display_conditions(temp_strA.substring(4,6)));
+      }
+      parameter = strtok(NULL," ");
+      temp_strA = parameter;
+    }
+    conditions_start = temp_strA.substring(0,1);
+    temp_strB = temp_strA.substring(0,3);
+    if ((temp_strA == "//" || conditions_test.indexOf(conditions_start) >= 0)
+        && !(valid_cloud_report(temp_strB))
+        && temp_strB != "NSC"
+        && !temp_strA.startsWith("M0")) {
+      temp_strB = "";
+      if (conditions_start == "-" || conditions_start == "+") {
+        if (conditions_start == "-") temp_strB = "Light ";
+        else temp_strB = "Heavy ";
+        temp_strA = temp_strA.substring(1);
+      }
+      if (temp_strA.length() == 2) Serial.print(temp_strB + (temp_strA));
+      else {
+        if (temp_strA.length() >= 5) Serial.print("Poor Vert Visibility");
+        else Serial.print(temp_strB + (temp_strA.substring(0,2)));
+      }
+      parameter = strtok(NULL," ");
+      temp_strA = parameter;
+    }
+    if (valid_cloud_report(temp_strA) || temp_strA.startsWith("VV/")) {
+      temp_strA = convert_clouds(temp_strA);
+      Serial.print(temp_strA);
+      temp_strA = strtok(NULL," ");
+    }
+    if (valid_cloud_report(temp_strA)) {
+      temp_strA = convert_clouds(temp_strA);
+      Serial.print(temp_strA);
+      temp_strA = strtok(NULL," ");
+    }
+    if (valid_cloud_report(temp_strA)) {
+      temp_strA = convert_clouds(temp_strA);
+      Serial.print(temp_strA);
+      temp_strA = strtok(NULL," ");
+    }
+    if (valid_cloud_report(temp_strA)) {
+      temp_strA = convert_clouds(temp_strA);
+      Serial.print(temp_strA);
+      temp_strA = strtok(NULL," ");
+    }
+    if (temp_strA.indexOf("/") <= 0) {
+      temp_Pres = temp_strA;
+      temp_strA = "00/00";
+    }
+    String temp_sign = "";
+    if (temp_strA.startsWith("M")) {
+      temperature = 0 - temp_strA.substring(1,3).toInt();
+      if (temperature == 0) {temp_sign = "-";}
+    }
+    else {
+      temperature = temp_strA.substring(0,2).toInt();
+      if (temperature >=0 && temperature < 10) temp_sign = " ";
+    }
+    if (temperature <= 25) Serial.print(" Temp " + temp_sign + String(temperature) + char(247) + "C");
+    else Serial.print(" Temp " + temp_sign + String(temperature) + char(247) + "C");
+    temp_strB = temp_strA.substring(temp_strA.indexOf('/')+1);
+    if (temp_strB.startsWith("M")) dew_point = 0 - temp_strB.substring(1,3).toInt();
+    else dew_point = temp_strB.substring(0,2).toInt();
+    if (wind_speedKTS > 3 && temperature <= 14) {
+      temp_sign = "";
+      int wind_chill = int(calc_windchill(temperature,wind_speedKTS));
+      if (wind_chill >=0 && wind_chill < 10) {temp_sign = " ";}
+      Serial.print("WindC " + temp_sign + String(wind_chill) + char(247) + "C");
+    }
+    temp_sign = "";
+    if (dew_point >=0 && dew_point < 10) temp_sign = " ";
+    Serial.print(" Dewp " + temp_sign + String(dew_point) + char(247) + "C");
+    int RH = calc_rh(temperature,dew_point);
+    Serial.print("Rel.H " + String(RH) + "%");
+    if (temperature >= 20) {
+      float T = (temperature * 9 / 5) + 32;
+      float RHx = RH;
+      int tHI = (-42.379 + (2.04901523 * T) + (10.14333127 * RHx) -
+                (0.22475541 * T * RHx) - (0.00683783 * T * T) -
+                (0.05481717 * RHx * RHx)  + (0.00122874 * T * T * RHx) +
+                (0.00085282 * T * RHx * RHx) -
+                (0.00000199 * T * T * RHx * RHx) - 32 ) * 5 / 9;
+      Serial.print("HeatX " + String(tHI) + char(247) + "C");
+    }
+    temp_strA = strtok(NULL," ");
+    temp_strA.trim();
+    if (temp_Pres.startsWith("Q")) temp_strA = temp_Pres;
+    if (temp_strA.startsWith("Q")) {
+      if (temp_strA.substring(1,2) == "0") temp_strA = " " + temp_strA.substring(2);
+      else temp_strA = temp_strA.substring(1);
+      Serial.print(temp_strA + "mB");
+    }
+    temp_strA = strtok(NULL," ");
+    Process_secondary_reports(temp_strA, 143);
+    temp_strA = strtok(NULL," ");
+    Process_secondary_reports(temp_strA, 153);
+    parameter = NULL;
+  }
+}
