@@ -1,11 +1,11 @@
 /*----------------------------------------------------------------------*
   Weather conversion calculations
   for avr-libc ATMEL series 32bit SAMD21 CPUs
- 
+
   c2f() temp °celcius -> temp °fahrenheit
   f2c() temp °fahrenheit -> temp °celcius
   rh()  dew point °celcius & temp °celcius -> rel humidity %
-  wc()  windspeed MPH & temp °celcius -> windchill °celcius 
+  wc()  windspeed MPH & temp °celcius -> windchill °celcius
   p2h() barometric presure Pascals -> inches mercury ("hg)
   dp()  °temp (celc or fahr) & rel humitity % -> °dew point
   hi()  °temp (celc or fahr) & rel humitity % -> °heat index
@@ -14,8 +14,8 @@
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license
  *----------------------------------------------------------------------*/
- 
-// ------------------------------------- temperature celcius to fahrenheit 
+
+// ------------------------------------- temperature celcius to fahrenheit
 double c2f(double c2f_tempC) {
   return ((c2f_tempC * 9) / 5) + 32;
 }
@@ -27,8 +27,8 @@ double f2c(double f2c_tempF) {
 
 // ------------------ dew point celcius, temperature celcius to humidity %
 double rh(double rh_dewPointC, double rh_tempC) {
-  return (100 * (exp((17.271 * rh_dewPointC) / 
-         (237.7 + rh_dewPointC))) / (exp((17.271 * rh_tempC) / 
+  return (100 * (exp((17.271 * rh_dewPointC) /
+         (237.7 + rh_dewPointC))) / (exp((17.271 * rh_tempC) /
          (237.7 + rh_tempC))) + 0.5);
 }
 
@@ -37,28 +37,28 @@ float wc(int wc_tempC, int wc_windspeed) {
   float result;
   wc_windspeed = wc_windspeed * 1.852;      // convert to KPH
   result = 13.12 + 0.6215 * wc_tempC - 11.37 *
-    pow(wc_windspeed,0.16) + 0.3965 
+    pow(wc_windspeed,0.16) + 0.3965
     * wc_tempC * pow(wc_windspeed,0.16);
-  if (result < 0 ) { 
-    return result - 0.5; 
-  } 
-  else { 
-    return result + 0.5; 
+  if (result < 0 ) {
+    return result - 0.5;
+  }
+  else {
+    return result + 0.5;
   }
 }
 
-// -------------------------------------- barometer pascals to in. mercury 
+// -------------------------------------- barometer pascals to in. mercury
 double p2h(double p2h_pascals) {
     return (p2h_pascals * 0.000295333727);
 }
 
 // ----------------------------------- temperature, humididty to dew point
 double dp(double dp_temp, int dp_humd) {
-    double temp = (237.7 * ((17.271 * dp_temp) / 
-                (237.7 + dp_temp) + 
-                log(dp_humd * 0.01))) / 
-                (17.271 - ((17.271 * dp_temp) / 
-                (237.7 + dp_temp) + 
+    double temp = (237.7 * ((17.271 * dp_temp) /
+                (237.7 + dp_temp) +
+                log(dp_humd * 0.01))) /
+                (17.271 - ((17.271 * dp_temp) /
+                (237.7 + dp_temp) +
                 log(dp_humd * 0.01)));
     return dp_temp;
 }
@@ -95,12 +95,12 @@ double med(int m_uvindex, int m_alt, bool m_h20,
         (m_uvindex * (m_h20 * 1.5)) +   // water factor (1.5x)
         (m_uvindex * (m_snow * 1.85));  // snow factor (1.85x)
 
-  double s2med_b = 
+  double s2med_b =
         (-3.209E-5 * pow(m_fitz, 5)) +   // Fitz score @ 1 UV index
         (2.959E-3 * pow(m_fitz, 4)) -  // 5th order polynomial plot
         (0.103 * pow(m_fitz, 3)) +
         (1.664* pow(m_fitz, 2)) +
-        (3.82 * m_fitz) + 
+        (3.82 * m_fitz) +
          34.755;
 
   double s2med = ((s2med_b / uvi_f) * m_spf);   // seconds to MED
@@ -108,4 +108,3 @@ double med(int m_uvindex, int m_alt, bool m_h20,
   if (m2med > 480) m2med = 480;        // max at 6 hrs (480 mins)
   return m2med;
 }
-
