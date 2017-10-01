@@ -10,105 +10,110 @@
 #include <WiFi101.h>
 #include <WiFiUdp.h>
 #include <Adafruit_HX8357.h>
-#include <HX8357defines.h>
+#include "HX8357defines.h"
 #include <Adafruit_LEDBackpack.h>
-#include <LEDBackpackdefines.h>
+#include "LEDBackpackdefines.h"
 #include <Adafruit_GFX.h>
 #include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeSans12pt7b.h>
 #include "NOAAmetar.h"              // Gets current METAR string
-                // NOAAmetar(String station, int &respcode)
-                // inputs
-                //   station                 reporting station usually airport
-                // returns
-                //   &respcode               http response code e.g. 200 = ok
-                //   struct NOAACurrent      current
-                //     current.metar         formatted METAR strip
-                //     current.obstimeUTC    observation time UTC
-                //     current.tempC         temperature °Celcius
-                //     current.dewpointC     dew point °Celcius
-                //     current.winddirDeg    wind direction °0-359
-                //     current.windspeedKTS  wind speed knots per hour
-                //     current.visibilitySM  visibility statute miles
-                //     current.altSettingHG  altimeter setting inches hg
-                //     current.year          string forecast year
-                //     current.month         string forecast month
-                //     current.day           string forecast day
-                //     current.hour          string forecast hour
-                //     current.minute        string forecast minute
-                //     current.pm            string forecast pm y/n;
+         // NOAAmetar(String station, int &respcode)
+         // inputs
+         //   station                 reporting station usually airport
+         // returns
+         //   &respcode               http response code e.g. 200 = ok
+         //   struct NOAACurrent      current
+         //     current.metar         formatted METAR strip
+         //     current.obstimeUTC    observation time UTC
+         //     current.tempC         temperature °Celcius
+         //     current.dewpointC     dew point °Celcius
+         //     current.winddirDeg    wind direction °0-359
+         //     current.windspeedKTS  wind speed knots per hour
+         //     current.visibilitySM  visibility statute miles
+         //     current.altSettingHG  altimeter setting inches hg
+         //     current.year          string forecast year
+         //     current.month         string forecast month
+         //     current.day           string forecast day
+         //     current.hour          string forecast hour
+         //     current.minute        string forecast minute
+         //     current.pm            string forecast pm y/n;
 #include "NOAAForecast.h"           // Gets current NOAA v3 Forcast
-                // NOAAForecast(String latitude, Sting longitude)
-                // inputs
-                //   latitude           station longitude e.g. "33.8774"
-                //   longitude          station longitude e.g. "-84.3046"
-                // returns
-                //   forecast.generated string forecast time 2017-09-23T19:53:00Z
-                //   periods px (0-10)
-                //   forecast.pxname    string period name
-                //   forecast.pxtemp    string temperature °celcius
-                //   forecast.pxicon    string icon ult
-                //   forecast.pxshort   string shortForecast
-                //   forecast.year      string forecast year
-                //   forecast.month     string forecast month
-                //   forecast.day       string forecast day
-                //   forecast.hour      string forecast hour
-                //   forecast.minute    string forecast minute
-                //   forecast.pm        string forecast pm y/n;
+         // NOAAForecast(String latitude, Sting longitude)
+         // inputs
+         //   latitude           station longitude e.g. "33.8774"
+         //   longitude          station longitude e.g. "-84.3046"
+         // returns
+         //   forecast.generated string time 2017-09-23T19:53:00Z
+         //   periods px (0-10)
+         //   forecast.pxname    string period name
+         //   forecast.pxtemp    string temperature °celcius
+         //   forecast.pxicon    string icon ult
+         //   forecast.pxshort   string shortForecast
+         //   forecast.year      string forecast year
+         //   forecast.month     string forecast month
+         //   forecast.day       string forecast day
+         //   forecast.hour      string forecast hour
+         //   forecast.minute    string forecast minute
+         //   forecast.pm        string forecast pm y/n;
 #include "timestamp.h"              // breaks down timestamp string
-                // timeStamp(String timeStamp, bool hour24TS, int UTCoffsetTS,
-                //            int &yearTS, int &monthTS, int &dateTS,
-                //            int &hourTS, bool &pmTS, int &minuteTS)
-                // inputs
-                //   timeStamp    string as 2017-09-23T19:53:00Z
-                //   hour24TS     24 hour format as y/n select
-                //   UTCoffsetTS) timezone offset in hours
-                // returns
-                //   &yearTS      int year as yyyy
-                //   &monthTS     int month as mm
-                //   &dateTS      int date timezone offset as dd
-                //   &hourTS      int hour timezone offset and 12/24 hour as hh
-                //   &pmTS        bool pm y/n
-                //   &minuteTS    int minutes as mm
+         // timeStamp(String timeStamp, bool hour24TS, 
+         //            int UTCoffsetTS, int &yearTS,
+         //            int &monthTS, int &dateTS, int &hourTS,
+         //            bool &pmTS, int &minuteTS)
+         // inputs
+         //   timeStamp    string as 2017-09-23T19:53:00Z
+         //   hour24TS     24 hour format as y/n select
+         //   UTCoffsetTS) timezone offset in hours
+         // returns
+         //   &yearTS      int year as yyyy
+         //   &monthTS     int month as mm
+         //   &dateTS      int date timezone offset as dd
+         //   &hourTS      int hour converted 12/24 hour as hh
+         //   &pmTS        bool pm y/n
+         //   &minuteTS    int minutes as mm
 #include "WiFiCreds.h"              // WiFi credentials
-              // char ssid[] = " " network SSID (name)
-              // char pass[] = " " network password
+         // char ssid[] = " " network SSID (name)
+         // char pass[] = " " network password
 #include "wxconversions.h"          // weather conversions
-              // Celc > Fahr double c2f(double [temp °celcius])
-              //             returns (double [temp °fahrenheit])
-              // Fahr > Celc double f2c(double [temp °fahrenheit])
-              //             retuns (double [temp °celcius])
-              // Humidity    double rh(double [dew point °celcius], double [temp °celcius])
-              //             returns (double [% rel humidity])
-              // Windchill   float wc(double [temp °celcius], int [MPH windspeed]}
-              //             returns (float [windchill °celcius])
-              // PA -> "HG   double p2h(double pascals)
-              //             returns double [presure in inches mercury])
-              // Dew Point   double dp(double [temp °celcius or °fahrenheit],
-              //               int [% rel humidity])
-              //             returns double [dew point °celcius or °fahrenheit]
-              // Heat Index  double hi(double [temp °celcius or °fahrenheit],
-              //               int [% rel humidity], bool [°celcius input ?])
-              //             returns heat index double [temp °celcius or °fahrenheit]
-              // MED         double med(int [uvindex], int [altitude meters], bool [on water ?],
-              //               bool [on snow ?], int [fitz skin type], int [spf applied])
-              //             returns int [mins] to Min Erythemal Dose (MED) - sunburn
+         // Celc > Fahr double c2f(double [temp °celcius])
+         //             returns (double [temp °fahrenheit])
+         // Fahr > Celc double f2c(double [temp °fahrenheit])
+         //             retuns (double [temp °celcius])
+         // Humidity    double rh(double [dew point °celcius], 
+         //                       double [temp °celcius])
+         //             returns (double [% rel humidity])
+         // Windchill   float wc(double [temp °celcius], 
+         //                      int [MPH windspeed]}
+         //             returns (float [windchill °celcius])
+         // PA -> "HG   double p2h(double pascals)
+         //             returns double [presure in inches mercury])
+         // Dew Point   double dp(double [temp °celcius or °fahr],
+         //               int [% rel humidity])
+         //             returns double [dew point °celcius or °fahr]
+         // Heat Index  double hi(double [temp °celcius or °fahr],
+         //               int [% rel humidity], bool [°celcius ?])
+         //             returns [temp °celcius or °fahrenheit]
+         // MED         double med(int [uvindex], int [altitude mtrs], 
+         //             bool [on water ?], bool [on snow ?], 
+         //             int [fitz skin type], int [spf applied])
+         //             returns int [mins to Min Erythemal Dose]
 #include "convertTime.h"            // timezone and 12/24 hr conversion
-              // convertTime(int Hour24, bool Time24, int &Hour12, bool &pm)
-              // inputs
-              //   Hour24   int hour in 24 hour format
-              //   Time24   bool 24 hour time y/n
-              // returns
-              //   &Hour12  int hour in 12 hour format (return)
-              //   &pm      bool pm y/n
+         // convertTime(int Hour24, bool Time24, int &Hour12, bool &pm)
+         // inputs
+         //   Hour24   int hour in 24 hour format
+         //   Time24   bool 24 hour time y/n
+         // returns
+         //   &Hour12  int hour in 12 hour format (return)
+         //   &pm      bool pm y/n
 #include "dtostrf.h"                // Convert float to string
-              // char *dtostrf(double val, signed char width, unsigned char prec, char *sout)
-              // inputs
-              //   val      float variable
-              //   width    string length returned INCLUDING decimal point
-              //   prec     number of digits after the deimal point to print
-              // returns
-              //   sout     destination of output buffer (must be large enough)
+         // char *dtostrf(double val, signed char width, 
+         //                 unsigned char prec, char *sout)
+         // inputs
+         //   val    float variable
+         //   width  string length returned INCLUDING decimal point
+         //   prec   number of digits after the deimal point to print
+         // returns
+         //   sout   output buffer (must be large enough)
 
 
   // -------------------------------- Declare Structs -------------------- //
@@ -118,7 +123,7 @@ Adafruit_HX8357 tft = Adafruit_HX8357(TFT_CS, TFT_DC, TFT_RST);
 WiFiSSLClient client;           // client for NOAAForecast
 HttpClient xml;                 // client for NOAACurrent
 NOAAForecast forecast;          // NOAA forecast api.weather.gov v3 get
-NOAACurrent current;            // NOAA current METAR get aviationweather.gov
+NOAACurrent current;            // NOAA curr METAR get aviationweather.gov
 int status  = WL_IDLE_STATUS;
 
 void setup() {            // ================ SETUP ====================== //
@@ -127,13 +132,13 @@ void setup() {            // ================ SETUP ====================== //
 
   pinMode(LED_BUILTIN, OUTPUT);     // setup onboard LED
 
-  // -------------------------------- LEDS SETUP ------------------------ //
+  // -------------------------------- LEDS SETUP ------------=------------ //
   ClockDisp.begin(Clock_I2C);
   hTempDisp.begin(hTemp_I2C);
   lTempDisp.begin(lTemp_I2C);
   cTempDisp.begin(cTemp_I2C);
 
-  // -------------------------------- TFT SETUP ------------------------ //
+  // -------------------------------- TFT SETUP -------------------------- //
   tft.begin(HX8357D);
   tft.setRotation(1);
   tft.setTextWrap(0);
@@ -296,18 +301,18 @@ void renderForecast() {   // ================ DISPLAY FORECAST =========== //
                 &yearGen, &monthGen, &dateGen, &hourGen, &pmGen, &minuteGen)
   char agePretty[50];
   sprintf(agePretty, "%d:%02d%s", hourGen, minuteGen, pmGen);
-  char per0[100];
-  sprintf(per0, "%s %02d %s",forecast.p0name,forecast.p0temp,forecast.p0short);
-  char per1[100];
-  sprintf(per1, "%s %02d %s",forecast.p1name,forecast.p1temp,forecast.p1short);
-  char per2[100];
-  sprintf(per2, "%s %02d %s",forecast.p2name,forecast.p2temp,forecast.p2short);
-  char per3[100];
-  sprintf(per3, "%s %02d %s",forecast.p3name,forecast.p3temp,forecast.p3short);
-  char per4[100];
-  sprintf(per4, "%s %02d %s",forecast.p4name,forecast.p4temp,forecast.p4short);
-  char per5[100];
-  sprintf(per5, "%s %02d %s",forecast.p5name,forecast.p5temp,forecast.p5short);
+  char p0[100];
+  sprintf(p0,"%s %02d %s",forecast.p0name,forecast.p0temp,forecast.p0short);
+  char p1[100];
+  sprintf(p1,"%s %02d %s",forecast.p1name,forecast.p1temp,forecast.p1short);
+  char p2[100];
+  sprintf(p2,"%s %02d %s",forecast.p2name,forecast.p2temp,forecast.p2short);
+  char p3[100];
+  sprintf(p3,"%s %02d %s",forecast.p3name,forecast.p3temp,forecast.p3short);
+  char p4[100];
+  sprintf(p4,"%s %02d %s",forecast.p4name,forecast.p4temp,forecast.p4short);
+  char p5[100];
+  sprintf(p5,"%s %02d %s",forecast.p5name,forecast.p5temp,forecast.p5short);
   int firstl = 5;     int lastl = 11;     // display line limits
   tft.fillRect(0, LineNu[firstl]-LINE, tft.width(), LineNu[lastl], BGROUND);
   tft.setFont(&FreeSans9pt7b);
@@ -339,12 +344,12 @@ void renderForecast() {   // ================ DISPLAY FORECAST =========== //
   sprintf(CurrentTime, "%02d:%02d", rtc.getHour(), rtc.getMinutes());
   Serial.print("Pulled   "); Serial.println(CurrentTime);
   Serial.print("Updated  "); Serial.println(agePretty);
-  Serial.print("   ");       Serial.println(per0);
-  Serial.print("   ");       Serial.println(per1);
-  Serial.print("   ");       Serial.println(per2);
-  Serial.print("   ");       Serial.println(per3);
-  Serial.print("   ");       Serial.println(per4);
-  Serial.print("   ");       Serial.println(per5);
+  Serial.print("   ");       Serial.println(p0);
+  Serial.print("   ");       Serial.println(p1);
+  Serial.print("   ");       Serial.println(p2);
+  Serial.print("   ");       Serial.println(p3);
+  Serial.print("   ");       Serial.println(p4);
+  Serial.print("   ");       Serial.println(p5);
   return true;
 }
 
@@ -352,7 +357,7 @@ void statusLine() {       // ================ STATUS LINE ================ //
   int firstl = 12;
   int lastl = 12;
   // -------------------------------- CLEAR AREA ------------------------- //
-  tft.fillRect(0, LineNu[firstl] - LINE, tft.width(), LineNu[lastl], BGROUND);
+  tft.fillRect(0,LineNu[firstl]-LINE,tft.width(),LineNu[lastl],BGROUND);
 
   int hour, AorP;
   convertTime(rtc.getHours(), &hour, &AorP);

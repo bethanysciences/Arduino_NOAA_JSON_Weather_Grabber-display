@@ -41,51 +41,16 @@
   MIT license
  *----------------------------------------------------------------------*/
 
-#ifndef NOAA_METAR_H
-#define NOAA_METAR_H
+#include "NOAAmetar.h"
 
-#include "Arduino.h"
+#include <ArduinoHttpClient.h>
+#include "timeStamp.h"
+#include "xmlTakeParam.h"   // parse XML elements
+                    // xmlTakeParam(String inStr, String needParam)
+                    // input string       e.g. <temp_c>30.6</temp_c>
+                    // input needParam    parameter e.g. temp_c
+                    // returns            value as string
 
-typedef void(*voidFuncPtr)(void);
-class NOAAmetar {
-public:
-
-  NOAAmetar();
-  void begin(bool resetTime = false);
-
-  /* Get Functions */
-  Sting metar();
-  Sting obstimeUTC();
-  Sting tempC();
-  Sting dewpointC();
-  Sting winddirDeg();
-  Sting windspeedKTS();
-  Sting visibilitySM();
-  Sting altSettingHG();
-  Sting yearTS();
-  Sting monthTS();
-  Sting dateTS();
-  Sting hourTS();
-  Sting minuteTS();
-  Sting pmTS();
-
-  /* Set Functions */
-  void NOAAmetar(String station, int *code)
-  
-private:
-  bool _configured;
-
-  void config32kOSC(void);
-  void configureClock(void);
-  void RTCreadRequest();
-  bool RTCisSyncing(void);
-  void RTCdisable();
-  void RTCenable();
-  void RTCreset();
-  void RTCresetRemove();
-};
-
-//---
 int port              = 80;
 String server         = "aviationweather.gov";
 String product        = "/adds/dataserver_current/";
@@ -128,4 +93,3 @@ void NOAAmetar(String station, int *code) {
    forecast.minute      = minuteTS;
    forecast.pm          = pmTS;
 }
-#endif        // NOAA_METAR_H
