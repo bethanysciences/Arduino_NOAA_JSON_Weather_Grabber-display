@@ -2,14 +2,25 @@
   Weather conversion calculations
   for avr-libc ATMEL series 32bit SAMD21 CPUs
 
-  c2f() temp °celcius -> temp °fahrenheit
-  f2c() temp °fahrenheit -> temp °celcius
-  rh()  dew point °celcius & temp °celcius -> rel humidity %
-  wc()  windspeed MPH & temp °celcius -> windchill °celcius
-  p2h() barometric presure Pascals -> inches mercury ("hg)
-  dp()  °temp (celc or fahr) & rel humitity % -> °dew point
-  hi()  °temp (celc or fahr) & rel humitity % -> °heat index
-  med() Minimal Erythemal Dose (MED) sunburn threshold minutes
+  Celc > Fahr double c2f(double [temp °celcius])
+                returns (double [temp °fahrenheit])
+  Fahr > Celc double f2c(double [temp °fahrenheit])
+                retuns (double [temp °celcius])
+  Humidity    double rh(double [dew point °celcius], double [temp °celcius])
+                returns (double [% rel humidity])
+  Windchill   float wc(double [temp °celcius], int [MPH windspeed]}
+                returns (float [windchill °celcius])
+  PA -> "HG   double p2h(double pascals)
+                returns double [presure in inches mercury])
+  Dew Point   double dp(double [temp °celcius or °fahrenheit],
+                        int [% rel humidity])
+                returns double [dew point °celcius or °fahrenheit]
+  Heat Index  double hi(double [temp °celcius or °fahrenheit],
+                        int [% rel humidity], bool [°celcius input ?])
+                returns heat index double [temp °celcius or °fahrenheit]
+  MED         double med(int [uvindex], int [altitude meters], bool [on water ?],
+                         bool [on snow ?], int [fitz skin type], int [spf applied])
+                returns int [mins] to Min Erythemal Dose (MED) - sunburn
 
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license

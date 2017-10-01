@@ -1,21 +1,26 @@
 /*----------------------------------------------------------------------*
   Parse time stamp into elements corrected for timezone and ampm
-  for avr-libc ATMEL series 32bit SAMD21 CPUs
 
-  inputs   (timeStr)      timestamp string as 2017-09-23T19:53:00Z
-           (hour24_ts)    24 hour format as y/n select
-           (UTCoffset_ts) timezone offset in hours
-  outputs  (year_ts)      year as yyyy
-           (month_ts)     month as mm
-           (date_ts)      date timezone offset as dd
-           (hour_ts)      hour timezone offset and 12/24 hour as hh
-           (pm)           pm as y/n select
-           (minute_ts)    minutes as mm
+  // timeStamp(String timeStamp, bool hour24TS, int UTCoffsetTS,
+  //            int &yearTS, int &monthTS, int &dateTS,
+  //            int &hourTS, bool &pmTS, int &minuteTS)
+  // inputs
+  //   timeStamp    string as 2017-09-23T19:53:00Z
+  //   hour24TS        24 hour format as y/n select
+  //   UTCoffsetTS) timezone offset in hours
+  // outputs
+  //   &yearTS      int year as yyyy
+  //   &monthTS     int month as mm
+  //   &dateTS      int date timezone offset as dd
+  //   &hourTS      int hour timezone offset and 12/24 hour as hh
+  //   &pmTS        bool pm y/n
+  //   &minuteTS    int minutes as mm
 
+  For avr-libc ATMEL series 32bit SAMD21 CPUs
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license
  *----------------------------------------------------------------------*/
-void timestamp(String timeStr, bool hour24_ts, int UTCoffset_ts,
+void timeStamp(String timeStr, bool hour24_ts, int UTCoffset_ts,
                int *year_ts, int *month_ts, int *date_ts,
                int *hour_ts, bool *pm_ts, int *minute_ts) {
   int firstDash    = timeStr.indexOf("-");
