@@ -40,53 +40,92 @@
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license
  *----------------------------------------------------------------------*/
-#include <ArduinoHttpClient.h>
-#include "timeStamp.h"
-#include "WXdefines.h"
-#include "xmlTakeParam.h"   // parse XML elements
-                    // xmlTakeParam(String inStr, String needParam)
-                    // input string       e.g. <temp_c>30.6</temp_c>
-                    // input needParam    parameter e.g. temp_c
-                    // returns            value as string
-   int currPort           = 80;
-String currServer         = "aviationweather.gov";
-String currProduct        = "/adds/dataserver_current/";
-String currDataSource     = "metars";
-String currRequestType    = "retrieve";
-String currFormat         = "xml";
-String currHoursBeforeNow = "1";
-String currRequest        = "";
-String currResp           = "";
-WiFiClient wifi;
-HttpClient xml = HttpClient(wifi, currServer, currPort);
 
-void NOAAmetar(String currStation, int *currCode) {
-  String request = currProduct + "httpparam?" +
-                   "dataSource=" + currDataSource + "&" +
-                   "requestType=" + currRequestType + "&" +
-                   "format=" + currFormat + "&" +
-                   "hoursBeforeNow=" + currHoursBeforeNow + "&" +
-                   "stationString=" + CURRSTATION;
+#ifndef NOAA_METAR_H
+#define NOAA_METAR_H
+
+#include "Arduino.h"
+
+typedef void(*voidFuncPtr)(void);
+class NOAAmetar {
+public:
+
+  NOAAmetar();
+  void begin(bool resetTime = false);
+
+  /* Get Functions */
+  Sting metar();
+  Sting obstimeUTC();
+  Sting tempC();
+  Sting dewpointC();
+  Sting winddirDeg();
+  Sting windspeedKTS();
+  Sting visibilitySM();
+  Sting altSettingHG();
+  Sting yearTS();
+  Sting monthTS();
+  Sting dateTS();
+  Sting hourTS();
+  Sting minuteTS();
+  Sting pmTS();
+
+  /* Set Functions */
+  void NOAAmetar(String station, int *code)
+  
+private:
+  bool _configured;
+
+  void config32kOSC(void);
+  void configureClock(void);
+  void RTCreadRequest();
+  bool RTCisSyncing(void);
+  void RTCdisable();
+  void RTCenable();
+  void RTCreset();
+  void RTCresetRemove();
+};
+
+//---
+int port              = 80;
+String server         = "aviationweather.gov";
+String product        = "/adds/dataserver_current/";
+String dataSource     = "metars";
+String requestType    = "retrieve";
+String format         = "xml";
+String hoursBeforeNow = "1";
+String request        = "";
+String resp           = "";
+WiFiClient wifi;
+HttpClient xml = HttpClient(wifi, server, port);
+
+void NOAAmetar(String station, int *code) {
+  String request = product + "httpparam?" +
+                   "dataSource=" + dataSource + "&" +
+                   "requestType=" + requestType + "&" +
+                   "format=" + format + "&" +
+                   "hoursBeforeNow=" + hoursBeforeNow + "&" +
+                   "stationString=" + station;
   xml.get(request);
 
   *code = xml.responseStatusCode();
   int len = xml.contentLength();
   String response = xml.responseBody();
-  Current.metar         = xmlTakeParam(respParse, "raw_text");
-  Current.obstimeUTC    = xmlTakeParam(respParse, "observation_time");
-  Current.tempC         = xmlTakeParam(respParse, "temp_c");
-  Current.dewpointC     = xmlTakeParam(respParse, "dewpoint_c");
-  Current.winddirDeg    = xmlTakeParam(respParse, "wind_dir_degrees");
-  Current.windspeedKTS  = xmlTakeParam(respParse, "wind_speed_kt");
-  Current.visibilitySM  = xmlTakeParam(respParse, "visibility_statute_mi");
-  Current.altSettingHG  = xmlTakeParam(respParse, "altim_in_hg");
+  current.metar         = xmlTakeParam(respParse, "raw_text");
+  current.obstimeUTC    = xmlTakeParam(respParse, "observation_time");
+  current.tempC         = xmlTakeParam(respParse, "temp_c");
+  current.dewpointC     = xmlTakeParam(respParse, "dewpoint_c");
+  current.winddirDeg    = xmlTakeParam(respParse, "wind_dir_degrees");
+  current.windspeedKTS  = xmlTakeParam(respParse, "wind_speed_kt");
+  current.visibilitySM  = xmlTakeParam(respParse, "visibility_statute_mi");
+  current.altSettingHG  = xmlTakeParam(respParse, "altim_in_hg");
   timeStamp(String obstimeUTC, bool hour24, int UTCoffset,
             int &yearTS, int &monthTS, int &dateTS,
             int &hourTS, bool &pmTS, int &minuteTS)
-  Current.year          = yearTS;
-  Current.month         = monthTS;
-  Current.date          = dateTS;
-  Current.hour          = hourTS;
-  Current.minute        = minuteTS;
-  Current.pm            = pmTS;
+   forecast.year        = yearTS;
+   forecast.month       = monthTS;
+   forecast.date        = dateTS;
+   forecast.hour        = hourTS;
+   forecast.minute      = minuteTS;
+   forecast.pm          = pmTS;
 }
+#endif        // NOAA_METAR_H

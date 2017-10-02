@@ -29,31 +29,31 @@
 
 #include <ArduinoJson.h>
 #include "timeStamp.h"
+#include "WXdefines.h"
 
-String server     = "api.weather.gov";
-int port          = 443;
-String type       = "/points/"
-String lat        = "33.8774"       // station KPDK
-String lon        = "-84.3046";
-String product    = "/forecast";
+String fcstServer  = "api.weather.gov";
+int    fcstPort    = 443;
+String fcstType    = "/points/";
+String fcstProduct = "/forecast";
+String fcstAgent   = "User-Agent: bob@bethanysciences.net/arduinowx01/";
 
-void NOAAForecast(String lat, Sting lon) {
+void NOAAForecast() {
   if (connectServer(server)) {
-    if (sendRequest(lat, lon) && skipResponseHeaders()) parse();
+    if (sendRequest() && skipResponseHeaders()) parse();
     client.stop();
     return;
   }
 }
 bool connectServer() {
-  bool ok = client.connectSSL(server, port);
+  bool ok = client.connectSSL(FcstServer, FcstPort);
   return ok;
 }
-bool sendRequest(String lat, String lon) {
+bool sendRequest() {
   client.print("GET ");
   client.print(type);
-  client.print(lat);
+  client.print(FCSTLON);
   client.print(",");
-  client.print(lon);
+  client.print(FCSTLON);
   client.print(product);
   client.println(" HTTP/1.1");
   client.println("Host: api.weather.gov");
@@ -82,45 +82,45 @@ bool parse() {
     return false;
   }
   JsonObject& _context  = root["@context"];
-   forecast.generated   = root["generatedAt"];
+   Forecast.generated   = root["generatedAt"];
   JsonArray& periods    = root["periods"];
   JsonObject& periods0  = periods[0];
-   forecast.p0name      = periods0["name"];
-   forecast.p0temp      = periods0["temperature"];
-   forecast.p0icon      = periods0["icon"];
-   forecast.p0short     = periods0["shortForecast"];
+   Forecast.p0name      = periods0["name"];
+   Forecast.p0temp      = periods0["temperature"];
+   Forecast.p0icon      = periods0["icon"];
+   Forecast.p0short     = periods0["shortForecast"];
   JsonObject& periods1  = periods[1];
-   forecast.p1name      = periods1["name"];
-   forecast.p1temp      = periods1["temperature"];
-   forecast.p1icon      = periods1["icon"];
+   Forecast.p1name      = periods1["name"];
+   Forecast.p1temp      = periods1["temperature"];
+   Forecast.p1icon      = periods1["icon"];
    forecast.p1short     = periods1["shortForecast"];
   JsonObject& periods2  = periods[2];
-   forecast.p2name      = periods2["name"];
-   forecast.p2temp      = periods2["temperature"];
-   forecast.p2icon      = periods2["icon"];
-   forecast.p2short     = periods2["shortForecast"];
+   Forecast.p2name      = periods2["name"];
+   Forecast.p2temp      = periods2["temperature"];
+   Forecast.p2icon      = periods2["icon"];
+   Forecast.p2short     = periods2["shortForecast"];
   JsonObject& periods3  = periods[3];
-   forecast.p3name      = periods3["name"];
+   Forecast.p3name      = periods3["name"];
    forecast.p3temp      = periods3["temperature"];
    forecast.p3icon      = periods3["icon"];
    forecast.p3short     = periods3["shortForecast"];
   JsonObject& periods4  = periods[4];
-   forecast.p4name      = periods4["name"];
-   forecast.p4temp      = periods4["temperature"];
-   forecast.p4icon      = periods4["icon"];
-   forecast.p4short     = periods4["shortForecast"];
+   Forecast.p4name      = periods4["name"];
+   Forecast.p4temp      = periods4["temperature"];
+   Forecast.p4icon      = periods4["icon"];
+   Forecast.p4short     = periods4["shortForecast"];
   JsonObject& periods5  = periods[5];
-   forecast.p5name      = periods5["name"];
-   forecast.p4temp      = periods5["temperature"];
-   forecast.p4icon      = periods5["icon"];
-   forecast.p4short     = periods5["shortForecast"];
+   Forecast.p5name      = periods5["name"];
+   Forecast.p4temp      = periods5["temperature"];
+   Forecast.p4icon      = periods5["icon"];
+   Forecast.p4short     = periods5["shortForecast"];
   timeStamp(String timeStamp, bool hour24TS, int UTCoffsetTS,
             int &yearTS, int &monthTS, int &dateTS,
             int &hourTS, bool &pmTS, int &minuteTS)
-   forecast.year        = yearTS;
-   forecast.month       = monthTS;
-   forecast.date        = dateTS;
-   forecast.hour        = hourTS;
-   forecast.minute      = minuteTS;
-   forecast.pm          = pmTS;
+   Forecast.year        = yearTS;
+   Forecast.month       = monthTS;
+   Forecast.date        = dateTS;
+   Forecast.hour        = hourTS;
+   Forecast.minute      = minuteTS;
+   Forecast.pm          = pmTS;
 }

@@ -12,8 +12,8 @@
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license
  *----------------------------------------------------------------------*/
-void convertTime(int Hour24, bool Time24, int *Hour12, bool *pm) {
-  pm = 0;                                // set as am
+void convertTime(int Hour24, bool TIME24, int *Hour12, bool *pm) {
+  *pm = 0;                                // set as am
   *Hour12 = Hour24;
   if (!Time24) {                          // 24 hour = false
     if (*Hour12 >= 12) {

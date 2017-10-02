@@ -41,8 +41,6 @@
   MIT license
  *----------------------------------------------------------------------*/
 
-#include "NOAAmetar.h"
-
 #include <ArduinoHttpClient.h>
 #include "timeStamp.h"
 #include "xmlTakeParam.h"   // parse XML elements
@@ -50,7 +48,6 @@
                     // input string       e.g. <temp_c>30.6</temp_c>
                     // input needParam    parameter e.g. temp_c
                     // returns            value as string
-
 int port              = 80;
 String server         = "aviationweather.gov";
 String product        = "/adds/dataserver_current/";
