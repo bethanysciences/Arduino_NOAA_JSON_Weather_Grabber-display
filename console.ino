@@ -5,35 +5,145 @@
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license
  *-------------------------------------------------------------------------*/
-#include <RTCZero.h>
-#include <SimpleTimer.h>
-#include <WiFi101.h>
-#include <WiFiUdp.h>
-#include <Adafruit_HX8357.h>
-#include "HX8357defines.h"
-#include <Adafruit_LEDBackpack.h>
-#include "LEDBackpackdefines.h"
-#include <Adafruit_GFX.h>
-#include <Fonts/FreeSans9pt7b.h>
-#include <Fonts/FreeSans12pt7b.h>
-#include "NOAAmetar.h"              // Gets current METAR string
-#include "NOAAForecast.h"           // Gets current NOAA v3 Forcast
-#include "timestamp.h"              // breaks down timestamp string
+#include "RTCZero.h"
+#include "SimpleTimer.h"
+#include "WiFi101.h"
+#include "Adafruit_HX8357.h"
+#include "Adafruit_LEDBackpack.h"
+#include "Adafruit_GFX.h"
+#include "Fonts/FreeSans9pt7b.h"
+#include "Fonts/FreeSans12pt7b.h"
 #include "WiFiCreds.h"              // WiFi credentials
-#include "wxconversions.h"          // weather conversions
 #include "convertTime.h"            // timezone and 12/24 hr conversion
 #include "dtostrf.h"                // Convert float to string
-#include "ClockDefines.h"
+#include "ArduinoHttpClient.h"
+#include "xmlTakeParam.h"
+#include "ArduinoJson.h"
 
+// ------------  Defines for Adafruit HX8357 TFT display ------------------- //
+#define TFT_CS    7                     // HX8357 WHT wire to MKR1000 pin
+#define TFT_DC    6                     // HX8357 GRN wire to MKR1000 pin
+#define TFT_RST   5                     // HX8357 ORG wire to MKR1000 pin
+#define TFT_MISO  5                     // HX8357 GRY wire to MKR1000 pin
+#define SD_CS     2                     // HX8357 WHT wire to MKR1000 pin
+#define FGROUND   HX8357_WHITE          // primary text color
+#define BGROUND   HX8357_BLUE           // primary background color
+#define GREEN     HX8357_GREEN
+#define BLACK     HX8357_BLACK
+#define RED       HX8357_RED
+#define CYAN      HX8357_CYAN
+#define MAGENTA   HX8357_MAGENTA
+#define YELLOW    HX8357_YELLOW
+int LineNu[80];                         // line structure
+int firstl = 1;
+#define MARGIN    8                     // margin (pixels)
+#define SLINE     16                    // base line height (pixels)
+#define LINE      25                    // line height (pixels)
+#define TAB       130                   // tab width (pixels)
+Adafruit_HX8357 tft = Adafruit_HX8357(TFT_CS, TFT_DC, TFT_RST);
+
+// -------------------  Defines for Time Displays ---------------------- //
+#define UTCOFFSET       -4            // EDT 2nd sun mar | EST 1st sun NOV
+int UTCEPOCH          = -4 * 3600;    // epoch timezone offset
+const char* TIMEZONE  = "EDT";        // timezone lables
+const char* AMPM[2]   = {"pm", "am"}; // AM/PM preferred lables
+bool TIME24           = false;        // false = use 12 hour time
+int MIN               = 60000;        // 1 minute microseconds
+bool blinkColon       = false;
 RTCZero rtc;
 SimpleTimer timer;
-Adafruit_HX8357 tft = Adafruit_HX8357(TFT_CS, TFT_DC, TFT_RST);
-WiFiSSLClient client;            // client for NOAAForecast
-HttpClient xml;                  // client for NOAACurrent
+
+// --------- Defines for Adafruit LED Backpack i2c LED displays ------- //
+#define Clock_I2C   0x75    // yellow
+#define hTemp_I2C   0x71    // red
+#define cTemp_I2C   0x72    // grn
+#define lTemp_I2C   0x70    // blu
+Adafruit_7segment ClockDisp = Adafruit_7segment();
+Adafruit_7segment HTempDisp = Adafruit_7segment();
+Adafruit_7segment LTempDisp = Adafruit_7segment();
+Adafruit_7segment CTempDisp = Adafruit_7segment();
+
+// ----------------------  Defines NOAA METAR ------------------------- //
+   int currPort           = 80;
+String currServer         = "aviationweather.gov";
+String currProduct        = "/adds/dataserver_current/";
+String currDataSource     = "metars";
+String currRequestType    = "retrieve";
+String currFormat         = "xml";
+String currHoursBeforeNow = "1";
+String currRequest        = "";
+String currResp           = "";
+struct c_rent {
+  String metar;
+  String obstimeUTC;
+  double tempC;
+  double dewpointC;
+   int winddirDeg;
+   int windspeedKTS;
+   int visibilitySM;
+  double altSettingHG;
+   int year;
+   int month;
+   int date;
+   int hour;
+   int minute;
+  bool pm;
+};
+typedef struct c_rent Curr;
+Curr Current;
+
+// -------------------  Defines NOAA FORECAST ------------------ //
+const char* FCSTLAT = "33.8774";     // station KPDK NOAA forecast v3 pull
+const char* FCSTLON = "-84.3046";
+const char* FcstServer  = "api.weather.gov";
+int    FcstPort    = 443;
+const unsigned long HTTPTimeout = 10000;
+struct f_cast {
+const char* generated;
+const char* p0;
+const char* p1;
+const char* p3;
+const char* p4;
+const char* p5;
+const char* p0name;
+const char* p1name;
+const char* p2name;
+const char* p3name;
+const char* p4name;
+const char* p5name;
+double p0tempC;
+double p1tempC;
+double p2tempC;
+double p3tempC;
+double p4tempC;
+double p5tempC;
+const char* p0icon;
+const char* p1icon;
+const char* p2icon;
+const char* p3icon;
+const char* p4icon;
+const char* p5icon;
+const char* p0short;
+const char* p1short;
+const char* p2short;
+const char* p3short;
+const char* p4short;
+const char* p5short;
+   int year;
+   int month;
+   int date;
+   int hour;
+   int minute;
+  bool pm;
+};
+typedef struct f_cast Fcst;
+Fcst Forecast;
+
+// -------------------  Defines for WIFI Operations ------------------- //
+WiFiClient wifi;
+HttpClient xml = HttpClient(wifi, currServer, currPort);
+WiFiSSLClient client;           // client for NOAAForecast
 int status  = WL_IDLE_STATUS;
-String CURRSTATION = "KPDK";     // station KPDK for NOAA METAR pull
-String FCSTLAT     = "33.8774";  // station KPDK NOAA forecast v3 pull
-String FCSTLON     = "-84.3046";
 
 void setup() {            // ================ SETUP ====================== //
   Serial.begin(115200);
@@ -43,9 +153,9 @@ void setup() {            // ================ SETUP ====================== //
 
   // -------------------------------- LEDS SETUP ------------=------------ //
   ClockDisp.begin(Clock_I2C);
-  hTempDisp.begin(hTemp_I2C);
-  lTempDisp.begin(lTemp_I2C);
-  cTempDisp.begin(cTemp_I2C);
+  HTempDisp.begin(hTemp_I2C);
+  LTempDisp.begin(lTemp_I2C);
+  CTempDisp.begin(cTemp_I2C);
 
   // -------------------------------- TFT SETUP -------------------------- //
   tft.begin(HX8357D);
@@ -58,7 +168,6 @@ void setup() {            // ================ SETUP ====================== //
     LineNu[i] = l; l += LINE;
   }
 
-  int firstl = 1;
   tft.setFont(&FreeSans9pt7b);
   tft.setTextColor(FGROUND);
   tft.setCursor(MARGIN, LineNu[firstl]);
@@ -104,7 +213,7 @@ void setup() {            // ================ SETUP ====================== //
   Serial.println();
   Serial.print(" NTP epoch acquired  ");      Serial.println(epoch);
 
-  epoch = epoch + UTCOffsetEpoch;
+  epoch = epoch + UTCEPOCH;
 
   Serial.print(" Epoch timezone adjusted ");  Serial.println(epoch);
 
@@ -112,7 +221,6 @@ void setup() {            // ================ SETUP ====================== //
 
   Serial.print(" > time ");   Serial.print(rtc.getHours());
   Serial.print(":");          Serial.println(rtc.getMinutes());
-  bool blinkColon = false;
 
   // -------------------------------- HEADER FOR DEBUG REEDINGS ---------- //
   Serial.print("pulled"); Serial.print("\t");
@@ -144,8 +252,9 @@ void cycleColon() {       // ================ COLON ====================== //
 }
 
 void renderClock() {      // ================ CLOCK DISPLAY ============== //
-  int hour, AorP;
-  convertTime(rtc.getHours(), &hour, &AorP);
+  int hour;
+  bool AorP;
+  convertTime(rtc.getHours(), TIME24, &hour, &AorP);
   if ((hour / 10) > 0) {
     ClockDisp.writeDigitNum(0, (hour / 10));                   // drop lead 0
   }
@@ -157,22 +266,22 @@ void renderClock() {      // ================ CLOCK DISPLAY ============== //
 }
 
 void getCurrent() {       // ================ GET CURRENT ================ //
-  NOAAmetar(station);
+  NOAAmetar();
   renderCurrent();
 }
 
 void renderCurrent() {    // ================ DISPLAY CURRENT ============ //
   char curr[50];  sprintf(curr, "Time Stamp %s:%s%s",
-                            current.hour, current.minute, current.pm);
-  char tempC[20]; sprintf(tempC, "Temperature %s°C", current.tempC);
-  char dwptC[20]; sprintf(dwptC, "Dew Point %s°C", current.dewpointC);
-  char baro[40];  sprintf(baro, "%s""hg", current.altSettingHG);
+                          Current.hour, Current.minute, Current.pm);
+  char tempC[20]; sprintf(tempC, "Temperature %s°C", Current.tempC);
+  char dwptC[20]; sprintf(dwptC, "Dew Point %s°C", Current.dewpointC);
+  char baro[40];  sprintf(baro, "%s""hg", Current.altSettingHG);
   char wind[40];  sprintf(wind, "Wind Speed %sKTS Blowing %deg",
-                            current.windspeedKTS, current.winddirDeg);
-  char visi[40];  sprintf(visi, "Visibility %s Miles", current.visibilitySM);
+                            Current.windspeedKTS, Current.winddirDeg);
+  char visi[40];  sprintf(visi, "Visibility %s Miles", Current.visibilitySM);
 
   // -------------------------------- WRITE TFT -------------------------- //
-  tft.fillRect(tft.width()/2, LineNu[firstl]-10, tft.width()/2, 10, GREEN)
+  
   tft.setFont(&FreeSans12pt7b);
   tft.setTextColor(FGROUND);
   tft.setCursor(MARGIN, LineNu[firstl]);      tft.print(curr);
@@ -182,7 +291,8 @@ void renderCurrent() {    // ================ DISPLAY CURRENT ============ //
   tft.setCursor(MARGIN, LineNu[firstl + 4]);  tft.print(wind);
   tft.setCursor(MARGIN, LineNu[firstl + 5]);  tft.print(visi);
 
-  WriteLED(0, 0, tempC);
+  
+  WriteLED(0, 0, Current.tempC);
 
   // -------------------------------- DEBUG ------------------------------ //
   int cchour;
@@ -192,12 +302,12 @@ void renderCurrent() {    // ================ DISPLAY CURRENT ============ //
   sprintf(TimeStamp, "%02d:%02d%s", cchour, rtc.getMinutes(), AMPM[pm]);
   Serial.print(TimeStamp);              Serial.print("\t");
   Serial.print(curr);                   Serial.print("\t");
-  Serial.print(current.tempC);          Serial.print("\t");
-  Serial.print(current.dewpointC);      Serial.print("\t");
-  Serial.print(current.altSettingHG);   Serial.print("\t");
-  Serial.print(current.windspeedKTS);   Serial.print("\t");
-  Serial.print(current.winddirDeg);     Serial.print("\t");
-  Serial.println(current.visibilitySM);
+  Serial.print(Current.tempC);          Serial.print("\t");
+  Serial.print(Current.dewpointC);      Serial.print("\t");
+  Serial.print(Current.altSettingHG);   Serial.print("\t");
+  Serial.print(Current.windspeedKTS);   Serial.print("\t");
+  Serial.print(Current.winddirDeg);     Serial.print("\t");
+  Serial.println(Current.visibilitySM);
 }
 
 void getForecast() {      // ================ GET FORECAST =============== //
@@ -207,14 +317,10 @@ void getForecast() {      // ================ GET FORECAST =============== //
 
 void renderForecast() {   // ================ DISPLAY FORECAST =========== //
   double templ, temph;
-  int yearGen, monthGen, dateGen, hourGen, minuteGen;
-  bool pmGen;
-   timeStamp(Forecast.generated, TIME24, UTCOFFSET,
-            &yearGen, &monthGen, &dateGen, &hourGen, &pmGen, &minuteGen);
-  char agePretty[50];
-  sprintf(agePretty, "%d:%02d%s", hourGen, minuteGen, pmGen);
+  char stamp[50];
+  sprintf(stamp, "%d:%02d%s", Forecast.hour, Forecast.minute, AMPM[Forecast.pm]);
   char p0[100];
-  sprintf(p0,"%s %02d %s",Forecast.p0name,Forecast.p0tempC,Forecast.p0short);
+  sprintf(p0,"%s %02d %s", Forecast.p0name,Forecast.p0tempC,Forecast.p0short);
   char p1[100];
   sprintf(p1,"%s %02d %s",Forecast.p1name,Forecast.p1tempC,Forecast.p1short);
   char p2[100];
@@ -232,7 +338,7 @@ void renderForecast() {   // ================ DISPLAY FORECAST =========== //
   tft.setTextColor(FGROUND);
   tft.setCursor(MARGIN, LineNu[firstl]);
   tft.print("Last Forecast: ");
-  tft.print(agePretty);
+  tft.print(stamp);
   tft.fillRect(tft.width()/2, LineNu[firstl]-10, tft.width()/2, 10, GREEN);
   tft.setCursor(MARGIN, LineNu[firstl+1]);  tft.print(p0);
   tft.setCursor(MARGIN, LineNu[firstl+2]);  tft.print(p1);
@@ -256,7 +362,7 @@ void renderForecast() {   // ================ DISPLAY FORECAST =========== //
   char CurrentTime[50];
   sprintf(CurrentTime, "%02d:%02d", rtc.getHours(), rtc.getMinutes());
   Serial.print("Pulled   "); Serial.println(CurrentTime);
-  Serial.print("Updated  "); Serial.println(agePretty);
+  Serial.print("Updated  "); Serial.println(stamp);
   Serial.print("   ");       Serial.println(p0);
   Serial.print("   ");       Serial.println(p1);
   Serial.print("   ");       Serial.println(p2);
@@ -295,44 +401,250 @@ void statusLine() {       // ================ STATUS LINE ================ //
   tft.print(stat);
 }
 
-void WriteLED(int templ, int temph, int Ctemp) { // ==== WRITE LEDS ======  //
-  if (templ > 99) {
-    lTempDisp.writeDigitNum(0, (templ / 100));
-    lTempDisp.writeDigitNum(1, (templ / 10));
-    lTempDisp.writeDigitNum(3, (templ % 10));
-    lTempDisp.writeDigitRaw(4, B01110001);
+void WriteLED(int LTemp, int HTemp, int CTemp) { // ==== WRITE LEDS ======  //
+  if (LTemp > 99) {
+    LTempDisp.writeDigitNum(0, (LTemp / 100));
+    LTempDisp.writeDigitNum(1, (LTemp / 10));
+    LTempDisp.writeDigitNum(3, (LTemp % 10));
+    LTempDisp.writeDigitRaw(4, B01110001);
   }
   else {
-    lTempDisp.writeDigitNum(0, (templ / 10));
-    lTempDisp.writeDigitNum(1, (templ % 10));
-    lTempDisp.writeDigitRaw(3, B01110001);
-    lTempDisp.writeDigitRaw(4, B00000000);
+    LTempDisp.writeDigitNum(0, (LTemp / 10));
+    LTempDisp.writeDigitNum(1, (LTemp % 10));
+    LTempDisp.writeDigitRaw(3, B01110001);
+    LTempDisp.writeDigitRaw(4, B00000000);
   }
-  if (temph > 99) {
-    hTempDisp.writeDigitNum(0, (temph / 100));
-    hTempDisp.writeDigitNum(1, (temph / 10));
-    hTempDisp.writeDigitNum(3, (temph % 10));
-    hTempDisp.writeDigitRaw(4, B01110001);
-  }
-  else {
-    hTempDisp.writeDigitNum(0, (temph / 10));
-    hTempDisp.writeDigitNum(1, (temph % 10));
-    hTempDisp.writeDigitRaw(3, B01110001);
-    hTempDisp.writeDigitRaw(4, B00000000);
-  }
-  if (tempC > 99) {
-    cTempDisp.writeDigitNum(0, (Ctemp / 100));
-    cTempDisp.writeDigitNum(1, (Ctemp / 10));
-    cTempDisp.writeDigitNum(3, (Ctemp % 10));
-    cTempDisp.writeDigitRaw(4, B01110001);
+  if (HTemp > 99) {
+    HTempDisp.writeDigitNum(0, (HTemp / 100));
+    HTempDisp.writeDigitNum(1, (HTemp / 10));
+    HTempDisp.writeDigitNum(3, (HTemp % 10));
+    HTempDisp.writeDigitRaw(4, B01110001);
   }
   else {
-    cTempDisp.writeDigitNum(0, (Ctemp / 10));
-    cTempDisp.writeDigitNum(1, (Ctemp % 10));
-    cTempDisp.writeDigitRaw(3, B01110001);
-    cTempDisp.writeDigitRaw(4, B00000000);
+    HTempDisp.writeDigitNum(0, (HTemp / 10));
+    HTempDisp.writeDigitNum(1, (HTemp % 10));
+    HTempDisp.writeDigitRaw(3, B01110001);
+    HTempDisp.writeDigitRaw(4, B00000000);
   }
-  cTempDisp.writeDisplay();
-  hTempDisp.writeDisplay();
-  lTempDisp.writeDisplay();
+  if (CTemp > 99) {
+    CTempDisp.writeDigitNum(0, (CTemp / 100));
+    CTempDisp.writeDigitNum(1, (CTemp / 10));
+    CTempDisp.writeDigitNum(3, (CTemp % 10));
+    CTempDisp.writeDigitRaw(4, B01110001);
+  }
+  else {
+    CTempDisp.writeDigitNum(0, (CTemp / 10));
+    CTempDisp.writeDigitNum(1, (CTemp % 10));
+    CTempDisp.writeDigitRaw(3, B01110001);
+    CTempDisp.writeDigitRaw(4, B00000000);
+  }
+  CTempDisp.writeDisplay();
+  HTempDisp.writeDisplay();
+  LTempDisp.writeDisplay();
 }
+
+void timeStamp(String timeStr, bool hour24_ts, int UTCoffset_ts,
+               int *year_ts, int *month_ts, int *date_ts,
+               int *hour_ts, bool *pm_ts, int *minute_ts) {
+  int firstDash    = timeStr.indexOf("-");
+  int secondDash   = timeStr.lastIndexOf("-");
+  int firstT       = timeStr.indexOf("T");
+  int firstColon   = timeStr.indexOf(":");
+  int secondColon  = timeStr.lastIndexOf(":");
+
+  String yearStr   = timeStr.substring(0, firstDash);
+  String monthStr  = timeStr.substring(firstDash + 1);
+  String dateStr   = timeStr.substring(secondDash + 1);
+  String hourStr   = timeStr.substring(firstT + 1);
+  String minuteStr = timeStr.substring(firstColon + 1);
+
+  *year_ts     = yearStr.toInt();
+  *month_ts    = monthStr.toInt();
+  *minute_ts   = minuteStr.toInt();
+
+  int date_utc = dateStr.toInt();
+  int hour_utc = hourStr.toInt();
+  hour_utc     += UTCOFFSET;                        // TZ offset adjust
+  if (hour_utc < 0) { hour_utc += 24; date_utc -= 1; }
+  else if (hour_utc > 23) { hour_utc -= 24; date_utc -= 1; }
+  else if (hour_utc == 0) { hour_utc += 12; }
+
+  if (!hour24_ts) {                                   // 12/24 hour adjust
+    if (hour_utc >= 12) { hour_utc -= 12; *pm_ts = true; }
+  }
+  *hour_ts = hour_utc;
+  *date_ts = date_utc;
+}
+
+void NOAAForecast() { // ================ FORECAST ================ //
+  if (connectServer(FcstServer, FcstPort)) {
+    if (sendRequest() && skipResponseHeaders()) parse();
+    client.stop();
+    return;
+  }
+}
+bool connectServer(const char* SSLServer, int SSLPort) {
+  bool ok = client.connectSSL(SSLServer, SSLPort);
+  return ok;
+}
+
+bool sendRequest() {
+  client.print("GET /points/");
+  client.print(FCSTLON);
+  client.print(",");
+  client.print(FCSTLON);
+  client.println("/forecast HTTP/1.1");
+  client.println("Host: api.weather.gov");
+  client.print("User-Agent: bob@bethanysciences.net/arduinowx01/");
+  client.println("/forecast");
+  client.println("Accept: application/ld+json");
+  client.println("Connection: close");
+  client.println();
+}
+bool skipResponseHeaders() {
+  char endOfHeaders[] = "\r\n\r\n";
+  client.setTimeout(HTTPTimeout);
+  bool ok = client.find(endOfHeaders);
+  return ok;
+}
+bool parse() {
+  const size_t bufferSize = JSON_ARRAY_SIZE(14) +
+              JSON_OBJECT_SIZE(4) + JSON_OBJECT_SIZE(7) +
+              14*JSON_OBJECT_SIZE(13) + 8350;
+  DynamicJsonBuffer jsonBuffer(bufferSize);
+  JsonObject& root = jsonBuffer.parseObject(client);
+
+  if (!root.success()) {
+    Serial.println("Forecast parse fail");
+    return false;
+  }
+  JsonObject& _context  = root["@context"];
+   Forecast.generated   = root["generatedAt"];
+  JsonArray& periods    = root["periods"];
+  JsonObject& periods0  = periods[0];
+   Forecast.p0name      = periods0["name"];
+   Forecast.p0tempC      = periods0["temperature"];
+   Forecast.p0icon      = periods0["icon"];
+   Forecast.p0short     = periods0["shortForecast"];
+  JsonObject& periods1  = periods[1];
+   Forecast.p1name      = periods1["name"];
+   Forecast.p1tempC      = periods1["temperature"];
+   Forecast.p1icon      = periods1["icon"];
+   Forecast.p1short     = periods1["shortForecast"];
+  JsonObject& periods2  = periods[2];
+   Forecast.p2name      = periods2["name"];
+   Forecast.p2tempC      = periods2["temperature"];
+   Forecast.p2icon      = periods2["icon"];
+   Forecast.p2short     = periods2["shortForecast"];
+  JsonObject& periods3  = periods[3];
+   Forecast.p3name      = periods3["name"];
+   Forecast.p3tempC      = periods3["temperature"];
+   Forecast.p3icon      = periods3["icon"];
+   Forecast.p3short     = periods3["shortForecast"];
+  JsonObject& periods4  = periods[4];
+   Forecast.p4name      = periods4["name"];
+   Forecast.p4tempC      = periods4["temperature"];
+   Forecast.p4icon      = periods4["icon"];
+   Forecast.p4short     = periods4["shortForecast"];
+  JsonObject& periods5  = periods[5];
+   Forecast.p5name      = periods5["name"];
+   Forecast.p5tempC     = periods5["temperature"];
+   Forecast.p5icon      = periods5["icon"];
+   Forecast.p5short     = periods5["shortForecast"];
+
+  // ---- timeStamp parse
+  String stamp(Forecast.generated);
+  int firstDash    = stamp.indexOf("-");
+  int secondDash   = stamp.lastIndexOf("-");
+  int firstT       = stamp.indexOf("T");
+  int firstColon   = stamp.indexOf(":");
+  int secondColon  = stamp.lastIndexOf(":");
+  String yearStr   = stamp.substring(0, firstDash);
+  String monthStr  = stamp.substring(firstDash + 1);
+  String dateStr   = stamp.substring(secondDash + 1);
+  String hourStr   = stamp.substring(firstT + 1);
+  String minuteStr = stamp.substring(firstColon + 1);
+  Forecast.year    = yearStr.toInt();
+  Forecast.month   = monthStr.toInt();
+  Forecast.minute  = minuteStr.toInt();
+  int date_utc = dateStr.toInt();
+  int hour_utc = hourStr.toInt();
+  hour_utc     += UTCOFFSET;                // TZ offset adjust
+  if (hour_utc < 0) { 
+    hour_utc += 24; 
+    date_utc -= 1; 
+  }
+  else if (hour_utc > 23) { 
+    hour_utc -= 24; 
+    date_utc -= 1; 
+  }
+  else if (hour_utc == 0) hour_utc += 12;
+  
+  Forecast.pm = false;
+  if (!TIME24) {                            // 12/24 hour adjust
+    if (hour_utc >= 12) { hour_utc -= 12; Forecast.pm = true; }
+  }
+  Forecast.hour   = hour_utc;
+  Forecast.date    = date_utc;
+}
+
+void NOAAmetar() {    // ================ CURRENT ================ //
+  String request = currProduct + "httpparam?" +
+                   "dataSource=" + currDataSource + "&" +
+                   "requestType=" + currRequestType + "&" +
+                   "format=" + currFormat + "&" +
+                   "hoursBeforeNow=" + currHoursBeforeNow + "&" +
+                   "stationString=KPDK";
+  xml.get(request);
+  // currCode = xml.responseStatusCode();
+  int len = xml.contentLength();
+  String response = xml.responseBody();
+  Current.metar         = xmlTakeParam(response, "raw_text");
+  Current.obstimeUTC    = xmlTakeParam(response, "observation_time");
+  Current.tempC         = xmlTakeParam(response, "temp_c").toDouble();
+  Current.dewpointC     = xmlTakeParam(response, "dewpoint_c").toDouble();
+  Current.winddirDeg    = xmlTakeParam(response, "wind_dir_degrees").toInt();
+  Current.windspeedKTS  = xmlTakeParam(response, "wind_speed_kt").toInt();
+  Current.visibilitySM  = xmlTakeParam(response, "visibility_statute_mi").toInt();
+  Current.altSettingHG  = xmlTakeParam(response, "altim_in_hg").toDouble();
+
+  // ---- timeStamp parse
+  int firstDash    = Current.obstimeUTC .indexOf("-");
+  int secondDash   = Current.obstimeUTC .lastIndexOf("-");
+  int firstT       = Current.obstimeUTC .indexOf("T");
+  int firstColon   = Current.obstimeUTC .indexOf(":");
+  int secondColon  = Current.obstimeUTC .lastIndexOf(":");
+
+  String yearStr   = Current.obstimeUTC .substring(0, firstDash);
+  String monthStr  = Current.obstimeUTC .substring(firstDash + 1);
+  String dateStr   = Current.obstimeUTC .substring(secondDash + 1);
+  String hourStr   = Current.obstimeUTC .substring(firstT + 1);
+  String minuteStr = Current.obstimeUTC .substring(firstColon + 1);
+
+  Current.year     = yearStr.toInt();
+  Current.month    = monthStr.toInt();
+  Current.minute   = minuteStr.toInt();
+  int date_utc     = dateStr.toInt();
+  int hour_utc     = hourStr.toInt();
+  hour_utc        += UTCOFFSET;        // TZ offset adjust
+  if (hour_utc < 0) { 
+    hour_utc += 24; 
+    date_utc -= 1; 
+  }
+  else if (hour_utc > 23) { 
+    hour_utc -= 24; 
+    date_utc -= 1; 
+  }
+  else if (hour_utc == 0) hour_utc += 12;
+  
+  Current.pm = false;
+  if (!TIME24) {                       // 12/24 hour adjust
+    if (hour_utc >= 12) { 
+      hour_utc -= 12; 
+      Current.pm = true; 
+    }
+  }
+  Current.hour    = hour_utc;
+  Current.date    = date_utc;
+}
+

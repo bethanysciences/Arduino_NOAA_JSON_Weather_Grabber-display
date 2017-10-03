@@ -5,10 +5,11 @@
   © 2017 Bob Smith https://github.com/bethanysciences
   MIT license
  *----------------------------------------------------------------------*/
-int UTCOFFSET  = -4;                // EDT 2nd sun mar | EST 1st sun NOV
-int UTCEPOCH    = UTCOOFFSET * 3600; // epoch timezone offset
-char TIMEZONE   = "EDT";             // timezone lables
-char AMPM[2]    = {"pm", "am"};      // AM/PM preferred lables
+int UTCOFFSET  = -4;                 // EDT 2nd sun mar | EST 1st sun NOV
+int UTCEPOCH   = UTCOFFSET * 3600;  // epoch timezone offset
+const char* TIMEZONE   = "EDT";             // timezone lables
+const char* AMPM[2]    = {"pm", "am"};      // AM/PM preferred lables
 bool TIME24     = false;             // false = use 12 hour time
 int MIN         = 60000;             // 1 minute microseconds
+
 

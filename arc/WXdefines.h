@@ -9,8 +9,8 @@
 // ---------------- NOAA METAR API settings -------------------------------*/
 // for NOAACurrent.h
 struct c_rent {
-  char metar[200];
-  char obstimeUTC;
+String metar;
+String obstimeUTC;
 double tempC;
 double dewpointC;
    int winddirDeg;

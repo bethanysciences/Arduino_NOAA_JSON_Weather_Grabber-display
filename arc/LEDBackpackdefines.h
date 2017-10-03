@@ -6,9 +6,9 @@
   MIT license
  *----------------------------------------------------------------------*/
 Adafruit_7segment ClockDisp = Adafruit_7segment();
-Adafruit_7segment hTempDisp = Adafruit_7segment();
-Adafruit_7segment lTempDisp = Adafruit_7segment();
-Adafruit_7segment cTempDisp = Adafruit_7segment();
+Adafruit_7segment HTempDisp = Adafruit_7segment();
+Adafruit_7segment LTempDisp = Adafruit_7segment();
+Adafruit_7segment CTempDisp = Adafruit_7segment();
 #define Clock_I2C   0x75    // yellow
 #define hTemp_I2C   0x71    // red
 #define cTemp_I2C   0x72    // grn
