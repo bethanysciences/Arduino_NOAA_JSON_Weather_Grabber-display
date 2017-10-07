@@ -2,4 +2,8 @@
 .piolibdeps
 .clang_complete
 .gcc-flags.json
+<<<<<<< HEAD
 .travid.yml
+=======
+.DS_Store
+>>>>>>> 8b676ae350e63589a6f774ddafe95ad6ae4ff836
