@@ -2,7 +2,6 @@
   Weather and Information Console
 
   For avr-libc ATMEL series 32bit SAMD21 CPUs e.g. Arduino MKR1000
-  
   © 2017 Bob Smith https://github.com/bethanysciences/console
   MIT license
  *----------------------------------------------------------------------------------*/
@@ -25,24 +24,24 @@
               //  sout  destination of output buffer (must be large enough)
 #include "ArduinoHttpClient.h"
 #include "wxConversions.h"
-  // Celc > Fahr double c2f(double [temp °celcius])
-  //              returns (double [temp °fahrenheit])
-  // Fahr > Celc double f2c(double [temp °fahrenheit])
-  //              retuns (double [temp °celcius])
-  // Humidity double rh(double [dew point °celc], double [temp °celc])
-  //              returns (double [% rel humidity])
-  // Windchill  float wc(double [temp °celcius], int [MPH windspeed]}
-  //              returns (float [windchill °celcius])
-  // PA -> "HG  double p2h(double pascals)
-  //              returns double [presure in inches mercury])
-  // Dew Point  double dp(double [temp °celc or °fahr], int [% rel humd])
-  //              returns double [dew point °celcius or °fahrenheit]
-  // Heat Index double hi(double [temp °celcius or °fahrenheit],
-  //                       int [% rel humidity], bool [°celcius input ?])
-  //              returns heat index double [temp °celcius or °fahrenheit]
-  // MED  double med(int [uvindex], int [altitude meters], bool [on water ?],
-  //               bool [on snow ?], int [fitz skin type], int [spf applied])
-  //              returns int [mins] to Min Erythemal Dose (MED) - sunburn
+          // Celc > Fahr double c2f(double [temp °celcius])
+          //              returns (double [temp °fahrenheit])
+          // Fahr > Celc double f2c(double [temp °fahrenheit])
+          //              retuns (double [temp °celcius])
+          // Humidity double rh(double [dew point °celc], double [temp °celc])
+          //              returns (double [% rel humidity])
+          // Windchill  float wc(double [temp °celcius], int [MPH windspeed]}
+          //              returns (float [windchill °celcius])
+          // PA -> "HG  double p2h(double pascals)
+          //              returns double [presure in inches mercury])
+          // Dew Point  double dp(double [temp °celc or °fahr], int [% rel humd])
+          //              returns double [dew point °celcius or °fahrenheit]
+          // Heat Index double hi(double [temp °celcius or °fahrenheit],
+          //                       int [% rel humidity], bool [°celcius input ?])
+          //              returns heat index double [temp °celcius or °fahrenheit]
+          // MED  double med(int [uvindex], int [altitude meters], bool [on water ?],
+          //               bool [on snow ?], int [fitz skin type], int [spf applied])
+          //              returns int [mins] to Min Erythemal Dose (MED) - sunburn
 #include "xmlTakeParam.h"   // parse XML elements
                             // xmlTakeParam(String inStr, String needParam)
                             // input string       e.g. <temp_c>30.6</temp_c>
@@ -50,9 +49,12 @@
                             // returns value in string
 #include "ArduinoJson.h"    // https://bblanchon.github.io/ArduinoJson/
 
+// #define SERIAL_DEBUG     // used for serial debugging
+
 // -------------------------- Defines for WIFI Operations ------------------------- //
 
 int status  = WL_IDLE_STATUS;
+const char* CONNSTAT[2] = {"DISC", "CONN"};      // Connection preferred lables
 
 // ------------------  Defines for Adafruit HX8357 TFT display -------------------- //
 #define TFT_CS    7                         // HX8357 WHT wire to MKR1000 pin
@@ -84,7 +86,8 @@ int UTCEPOCH          = -4 * 3600;    // epoch timezone offset
 const char* TIMEZONE  = "EDT";        // timezone lables
 const char* AMPM[2]   = {"am", "pm"}; // AM/PM preferred lables
 bool TIME24           = false;        // false = use 12 hour time
-int MIN               = 60000;        // 1 minute microseconds
+int MIN               = 60000;        // 1 minute of microseconds
+int SEC               = 1000;         // 1 second of microseconds
 bool BLINKCOLON       = false;
 RTCZero rtc;
 SimpleTimer timer;
@@ -179,15 +182,13 @@ Fcst Forecast;
 void setup() {            // ===================== SETUP ========================== //
   pinMode(LED_BUILTIN, OUTPUT);                       // setup onboard LED
 
-  Serial.begin(115200);
-  
   //  WiFi.setPins(8,7,4,2);                          // for Adafruit Feather M0 WiFi
-  
-  while (!Serial);                                    // wait for serial to open
-  
-  Serial.print("START UP");
 
-
+  #ifdef SERIAL_DEBUG   // ----------------------- DEBUG -------------------------- //
+    Serial.begin(115200);
+    while (!Serial);                                    // wait for serial to open
+    Serial.print("START UP");
+  #endif
 
   // ------------------------------------- LEDS SETUP ----------------------------- //
   ClockDisp.begin(Clock_I2C);
@@ -209,30 +210,29 @@ void setup() {            // ===================== SETUP =======================
   CENTER = tft.width()/2;
   tft.setFont(&FreeSans9pt7b);
   tft.setTextColor(FGROUND);
-  tft.setCursor(MARGIN, LineNu[firstl]);
+  tft.setCursor(0, LineNu[firstl]);
 
   tft.print("TFT width ");     tft.println(tft.width());
   tft.print("TFT height ");    tft.println(tft.height());
   tft.print("TFT Lines ");     tft.println(tft.height() / LINE);
 
-  Serial.print("TFT width ");  Serial.println(tft.width());
-  Serial.print("TFT height "); Serial.println(tft.height());
-  Serial.print("TFT Lines ");  Serial.println(tft.height() / LINE);
-
+  #ifdef SERIAL_DEBUG   // ----------------------- DEBUG -------------------------- //
+    Serial.print("TFT width ");  Serial.println(tft.width());
+    Serial.print("TFT height "); Serial.println(tft.height());
+    Serial.print("TFT Lines ");  Serial.println(tft.height() / LINE);
+  #endif
+  
   // ------------------------------------- WIFI SETUP ----------------------------- //
 
   tft.print("connect to >");    tft.print(ssid);
-
-  Serial.print("connect to >"); Serial.print(ssid);
-
   while (status != WL_CONNECTED) {
     status = WiFi.begin(ssid, pass);
     tft.print(">");
     delay(500);
   }
   tft.print("> connected ");    tft.println();
-  Serial.println("> connected ");
-  digitalWrite(LED_BUILTIN, HIGH);                                // lite onboard LED
+  
+  digitalWrite(LED_BUILTIN, HIGH);          // lite onboard LED to indicate connection
 
   // ------------------------------------- SET CLOCK ------------------------------ //
   
@@ -242,50 +242,43 @@ void setup() {            // ===================== SETUP =======================
   tft.setFont(&FreeSans9pt7b);
   tft.setTextColor(FGROUND);
   tft.print("Time (epoch) ");       tft.println(epoch);
-  Serial.print("Time (epoch) ");    Serial.println(epoch);
-
+  
   while (epoch == 0) {
     epoch = WiFi.getTime();
     tft.print(".");
-    Serial.print(".");
     delay(500);
   }
-  Serial.println();
-  Serial.print("NTP epoch acquired      ");  Serial.println(epoch);
-
+  
   epoch = epoch + UTCEPOCH;
-
-  Serial.print("Epoch timezone adjusted ");  Serial.println(epoch);
 
   rtc.setEpoch(epoch);
 
-  // ------------------------------------- DEBUG ---------------------------------- //
-
-  int hour12;
-  bool pm;
-  convertTime(rtc.getHours(), TIME24, &hour12, &pm);
-  char stat[80];
-  IPAddress ip = WiFi.localIP();
-  sprintf(stat, "%s ip addr %d.%d.%d.%d %ddBm %02d/%02d/%02d %d:%02d%s %s",
+  #ifdef SERIAL_DEBUG   // --:--:--:--:--:--:--:--DEBUG :--:--:--:--:--:--:--:--:-- //
+    int hour12;
+    bool pm;
+    Serial.println();
+    Serial.print("Epoch timezone adjusted ");  Serial.println(epoch);
+    convertTime(rtc.getHours(), TIME24, &hour12, &pm);
+    char stat[80];
+    IPAddress ip = WiFi.localIP();
+    sprintf(stat, "%s ip addr %d.%d.%d.%d %ddBm %02d/%02d/%02d %d:%02d%s %s",
           WiFi.SSID(), ip[0], ip[1], ip[2], ip[3], WiFi.RSSI(),
           rtc.getMonth(), rtc.getDay(), rtc.getYear(),
           hour12, rtc.getMinutes(), AMPM[pm], TIMEZONE);
-  
-  Serial.println(stat);
-
-  // ------------------------------------------------------------------------------ //
-
+    Serial.println(stat);
+  #endif
 
   // ------------------------------------- SET TIMERS ----------------------------- //
-  timer.setInterval(1000, cycleColon);                     // every second
-  timer.setInterval(MIN, renderClock);                     // every minute
-  timer.setInterval(MIN/10, statusLine);                   // every 6 secs
-  timer.setInterval(MIN * 10, NOAAmetar);                 // every 10 mins
-  timer.setInterval(MIN * 30, NOAAForecast);                  // 1x / hour
+  
+  timer.setInterval(SEC * 1,  cycleColon);
+  timer.setInterval(SEC * 5, statusLine);
+  timer.setInterval(MIN * 1,  renderClock);
+  timer.setInterval(MIN * 10, NOAAmetar);
+  timer.setInterval(MIN * 30, NOAAForecast);
+  statusLine();  
   renderClock(); 
   NOAAmetar();  
   NOAAForecast(); 
-  statusLine();  
   renderClock();
 }
 
@@ -327,9 +320,6 @@ void renderClock() {      // ======================== CLOCK DISPLAY ============
 }
 
 void NOAAmetar() {        // ======================== CURRENT ===================== //
-  
-  // Serial.println("NOAAmetar");
-  
   String req0 = "/adds/dataserver_current/httpparam?";
   String req1 = "dataSource=metars&requestType=retrieve&";
   String req2 = "format=xml&hoursBeforeNow=1&stationString=KPDK";
@@ -351,20 +341,20 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   double altim_in_hg    = xmlTakeParam(response, "altim_in_hg").toDouble();
   dtostrf(altim_in_hg, 5, 2, Current.altSettingHG);
   
-  // ------------------------------------- DEBUG ---------------------------------- //
+  #ifdef SERIAL_DEBUG   // --:--:--:--:--:--:--:--DEBUG :--:--:--:--:--:--:--:--:-- //
+    Serial.print("Code ");          Serial.print(code); 
+    Serial.print("Length ");        Serial.println(len);
+    Serial.print("Body ");          Serial.println(response);
+    Serial.print("METAR --> ");     Serial.println(Current.metar );
+    Serial.print("obstimeUTC   ");  Serial.println(Current.obstimeUTC);
+    Serial.print("tempC        ");  Serial.println(Current.tempC);
+    Serial.print("dewpointC    ");  Serial.println(Current.dewpointC);
+    Serial.print("winddirDeg   ");  Serial.println(Current.winddirDeg);
+    Serial.print("windspeedKTS ");  Serial.println(Current.windspeedKTS);
+    Serial.print("visibilitySM ");  Serial.println(Current.visibilitySM);
+    Serial.print("altSettingHG ");  Serial.println(Current.altSettingHG);
+  #endif
   
-  Serial.print("Code ");     Serial.print(code); 
-  //  Serial.print(" Length ");  Serial.println(len);
-  //  Serial.print("Body ");  Serial.println(response);
-  Serial.print("  metar --> ");        Serial.println(Current.metar );
-  //  Serial.print("obstimeUTC   "); Serial.println(Current.obstimeUTC);
-  //  Serial.print("tempC        "); Serial.println(Current.tempC);
-  //  Serial.print("dewpointC    "); Serial.println(Current.dewpointC);
-  //  Serial.print("winddirDeg   "); Serial.println(Current.winddirDeg);
-  //  Serial.print("windspeedKTS "); Serial.println(Current.windspeedKTS);
-  //  Serial.print("visibilitySM "); Serial.println(Current.visibilitySM);
-  //  Serial.print("altSettingHG "); Serial.println(Current.altSettingHG);
-
   // ------------------------------------- PARSE TIME STAMP ----------------------- //
   int firstDash    = Current.obstimeUTC .indexOf("-");
   int secondDash   = Current.obstimeUTC .lastIndexOf("-");
@@ -408,10 +398,12 @@ void NOAAmetar() {        // ======================== CURRENT ==================
 
   // ------------------------------------- RENDER --------------------------------- //
 
-  // Serial.println("renderCurrent");
-  
-  char CurrStamp[50]; sprintf(CurrStamp, "Time Stamp %02d:%02d%s", 
-                             Current.hour, Current.minute, AMPM[Current.pm]);
+  char CurrStamp[50];
+  sprintf(CurrStamp, "Current as of: %d/%d/%d %d:%2d%s",  
+                      Current.month, Current.date, Current.year, 
+                      Current.hour, Current.minute, AMPM[Current.pm]);
+
+
   char CurrtempF[50]; sprintf(CurrtempF, "Temperature %02d°F", 
                                                               Current.tempF);
   char CurrdwptF[50]; sprintf(CurrdwptF, "Dew Point %02d°F", 
@@ -423,19 +415,22 @@ void NOAAmetar() {        // ======================== CURRENT ==================
                                                        Current.visibilitySM);
 
   // ------------------------------------- WRITE TFT ------------------------------ //
-  int firstl = 0;     int lastl = 3;                           // display line limits
-  tft.fillRect(0, LineNu[firstl], tft.width(), 
-                            LineNu[lastl+1], BGROUND);                  // clear screen
+  int firstl = 1;     int lastl = 3;                                   // line limits
+  tft.fillRect(0, 0, tft.width(), LineNu[lastl+1], BGROUND);          // clear screen
+  tft.setFont(&FreeSans9pt7b);
+  tft.setTextColor(FGROUND);
+  tft.setCursor(MARGIN, LineNu[firstl]);
+  tft.print(CurrStamp);
+  tft.fillRect((tft.width()/3) * 2, LineNu[firstl]-10, tft.width()/2, 10, GREEN);
+
   tft.setFont(&FreeSans12pt7b);
   tft.setTextColor(FGROUND);
   
-  tft.setCursor(MARGIN,          LineNu[firstl + 1]); tft.print(CurrStamp);
-  tft.setCursor(MARGIN + CENTER, LineNu[firstl + 1]); tft.print(CurrtempF);
-  tft.setCursor(MARGIN,          LineNu[firstl + 2]); tft.print(CurrdwptF);
-  tft.setCursor(MARGIN + CENTER, LineNu[firstl + 2]); tft.print(Currbaro);
-  tft.setCursor(MARGIN,          LineNu[firstl + 3]); tft.print(Currwind);
-  tft.setCursor(MARGIN + CENTER, LineNu[firstl + 3]); tft.print(Currvisi);
-
+  tft.setCursor(MARGIN,          LineNu[firstl + 1]); tft.print(CurrdwptF);
+  tft.setCursor(MARGIN + CENTER, LineNu[firstl + 1]); tft.print(Currbaro);
+  tft.setCursor(MARGIN ,         LineNu[firstl + 2]); tft.print(Currwind);
+  tft.setCursor(MARGIN + CENTER, LineNu[firstl + 2]); tft.print(Currvisi);
+  
   // ------------------------------------- WRITE LED ------------------------------ //
   
   if (Current.tempF > 99) {
@@ -452,49 +447,43 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   }
   CTempDisp.writeDisplay();
 
-  // ------------------------------------- DEBUG ---------------------------------- //
+  #ifdef SERIAL_DEBUG   // --:--:--:--:--:--:--:--DEBUG :--:--:--:--:--:--:--:--:-- //
+    Serial.print(" ");    Serial.print(CurrtempF);  
+    Serial.print(" ");    Serial.print(CurrdwptF);
+    Serial.print(" ");    Serial.print(Currbaro);
+    Serial.print(" ");    Serial.print(Currwind); 
+    Serial.print(" ");    Serial.println(Currvisi); 
 
-  // Serial.print(" "); Serial.print(CurrtempC);  
-  // Serial.print(" "); Serial.print(CurrdwptC);
-  // Serial.print(" "); Serial.print(Currbaro);
-  // Serial.print(" "); Serial.print(Currwind); 
-  // Serial.print(" "); Serial.println(Currvisi); 
-
-  char DCurrStamp[50]; sprintf(DCurrStamp, "%2d:%02d%s", Current.hour, 
+    char DCurrStamp[50]; sprintf(DCurrStamp, "%2d:%02d%s", Current.hour, 
                                                     Current.minute, AMPM[Current.pm]);
-  int cchour;
-  bool pm;
-  convertTime(rtc.getHours(), TIME24, &cchour, &pm);
-  char TimeStamp[50];
-  sprintf(TimeStamp, "%d:%02d%s", cchour, rtc.getMinutes(), AMPM[pm]);
+    int cchour;
+    bool pm;
+    convertTime(rtc.getHours(), TIME24, &cchour, &pm);
+    char TimeStamp[50];
+    sprintf(TimeStamp, "%d:%02d%s", cchour, rtc.getMinutes(), AMPM[pm]);
+    Serial.print("Currents --->");        Serial.print("\t");
+    Serial.print("pulled");               Serial.print("\t");
+    Serial.print(" stamp");               Serial.print("\t");
+    Serial.print("temp");                 Serial.print("\t");
+    Serial.print("dwpt");                 Serial.print("\t");
+    Serial.print("baro");                 Serial.print("\t");
+    Serial.print("wspd");                 Serial.print("\t");
+    Serial.print("wdir");                 Serial.print("\t");
+    Serial.println("visi");
   
-  Serial.print("Currents --->");        Serial.print("\t");
-  Serial.print("pulled");               Serial.print("\t");
-  Serial.print(" stamp");               Serial.print("\t");
-  Serial.print("temp");                 Serial.print("\t");
-  Serial.print("dwpt");                 Serial.print("\t");
-  Serial.print("baro");                 Serial.print("\t");
-  Serial.print("wspd");                 Serial.print("\t");
-  Serial.print("wdir");                 Serial.print("\t");
-  Serial.println("visi");
-  
-  Serial.print("             ");        Serial.print("\t");  
-  Serial.print(TimeStamp);              Serial.print("\t");
-  Serial.print(DCurrStamp);             Serial.print("\t");
-  Serial.print(Current.tempC);          Serial.print("\t");
-  Serial.print(Current.dewpointC);      Serial.print("\t");
-  Serial.print(Current.altSettingHG);   Serial.print("\t");
-  Serial.print(Current.windspeedKTS);   Serial.print("\t");
-  Serial.print(Current.winddirDeg);     Serial.print("\t");
-  Serial.println(Current.visibilitySM);
-  
-  // --------------------------------------------------------------------------------/
+    Serial.print("             ");        Serial.print("\t");  
+    Serial.print(TimeStamp);              Serial.print("\t");
+    Serial.print(DCurrStamp);             Serial.print("\t");
+    Serial.print(Current.tempC);          Serial.print("\t");
+    Serial.print(Current.dewpointC);      Serial.print("\t");
+    Serial.print(Current.altSettingHG);   Serial.print("\t");
+    Serial.print(Current.windspeedKTS);   Serial.print("\t");
+    Serial.print(Current.winddirDeg);     Serial.print("\t");
+    Serial.println(Current.visibilitySM);
+  #endif  
 }
 
 void NOAAForecast() {     // ======================== FORECAST ==================== //
-  
-  // Serial.println("NOAAForecast");
-  
   if (connectServer(FcstServer, FcstPort)) {
     if (sendRequest() && skipResponseHeaders()) parseForecast();
     client.stop();
@@ -502,16 +491,10 @@ void NOAAForecast() {     // ======================== FORECAST =================
   }
 }
 bool connectServer(const char* SSLServer, int SSLPort) {
-  
-  // Serial.println("connectServer");
-  
   bool ok = client.connectSSL(SSLServer, SSLPort);
   return ok;
 }
 bool sendRequest() {
-  
-  // Serial.println("sendRequest");
-  
   client.print("GET /points/");
   client.print("33.8774,-84.3046");
   client.println("/forecast HTTP/1.1");
@@ -523,19 +506,12 @@ bool sendRequest() {
   client.println();
 }
 bool skipResponseHeaders() {
-  
-  // Serial.println("skipResponseHeaders");
-  
   char endOfHeaders[] = "\r\n\r\n";
   client.setTimeout(HTTPTimeout);
   bool ok = client.find(endOfHeaders);
   return ok;
 }
 bool parseForecast() {
-  
-  // Serial.println("parseForecast");
-  // Serial.println(client);
-  
   const size_t bufferSize = JSON_ARRAY_SIZE(14) + JSON_OBJECT_SIZE(4) + 
                   JSON_OBJECT_SIZE(7) + 14*JSON_OBJECT_SIZE(13) + 8350;
   DynamicJsonBuffer jsonBuffer(bufferSize);
@@ -583,12 +559,7 @@ bool parseForecast() {
  const char* temphold5  = periods5["temperature"];
    Forecast.p5tempC     = atoi(temphold5);
    Forecast.p5icon      = periods5["icon"];
-   Forecast.p5short     = periods5["shortForecast"];
-
-// Serial.print("Pero0 ");  Serial.println(Forecast.p0name);
-// Serial.print("Temp ");   Serial.println(Forecast.p0tempC);
-// Serial.print("icon ");   Serial.println(Forecast.p0icon);   
-// Serial.print("short ");  Serial.println(Forecast.p0short);     
+   Forecast.p5short     = periods5["shortForecast"];   
 
   // ------------------------------------- PARSE TIME STAMP ----------------------- //
   
@@ -632,7 +603,9 @@ bool parseForecast() {
   // ------------------------------------- RENDER FORECAST ------------------------ //
   
   char FcstStamp[50];
-  sprintf(FcstStamp, "%d:%2d%s", Forecast.hour, Forecast.minute, AMPM[Forecast.pm]);
+  sprintf(FcstStamp, "Forecast as of: %d/%d/%d %d:%2d%s",  
+                      Forecast.month, Forecast.date, Forecast.year, 
+                      Forecast.hour, Forecast.minute, AMPM[Forecast.pm]);
   char p0[100];
   sprintf(p0,"%s %d %s", Forecast.p0name, Forecast.p0tempC, Forecast.p0short);
   char p1[100];
@@ -649,12 +622,12 @@ bool parseForecast() {
   // ------------------------------------- WRITE TFT ------------------------------ //
 
   int firstl = 5;     int lastl = 11;                           // display line limits
-  tft.fillRect(0, LineNu[firstl]-LINE, tft.width(), LineNu[lastl], BGROUND);
+  tft.fillRect(0, LineNu[firstl]-LINE, tft.width(), LineNu[lastl], BGROUND);  // clear
   tft.setFont(&FreeSans9pt7b);
   tft.setTextColor(FGROUND);
   tft.setCursor(MARGIN, LineNu[firstl]);
-  tft.fillRect(tft.width()/2, LineNu[firstl]-10, tft.width()/2, 10, GREEN);
-  tft.print("Last Forecast: ");             tft.print(FcstStamp);
+  tft.fillRect((tft.width()/3) * 2, LineNu[firstl]-10, tft.width()/2, 10, GREEN);
+  tft.print(FcstStamp);
   tft.setCursor(MARGIN, LineNu[firstl+1]);  tft.print(p0);
   tft.setCursor(MARGIN, LineNu[firstl+2]);  tft.print(p1);
   tft.setCursor(MARGIN, LineNu[firstl+3]);  tft.print(p2);
@@ -699,51 +672,114 @@ bool parseForecast() {
   HTempDisp.writeDisplay();
   LTempDisp.writeDisplay();
 
-  // ------------------------------------- DEBUG ---------------------------------- //
-
-  char FcstTime[50];
-  sprintf(FcstTime, "%02d:%02d", rtc.getHours(), rtc.getMinutes());
-  Serial.print("Pulled ");     Serial.print(FcstTime);
-  Serial.print(" | Updated "); Serial.println(FcstStamp);
-  
-  Serial.print(p0); Serial.print(" | "); Serial.println(p1);   
-  Serial.print(p2); Serial.print(" | "); Serial.println(p3);
-  Serial.print(p4); Serial.print(" | "); Serial.println(p5);
-  
-  // --------------------------------------------------------------------------------/
+  #ifdef SERIAL_DEBUG   // --:--:--:--:--:--:--:--DEBUG :--:--:--:--:--:--:--:--:-- //
+    Serial.println(client);
+    Serial.print("Pero0 ");  Serial.println(Forecast.p0name);
+    Serial.print("Temp ");   Serial.println(Forecast.p0tempC);
+    Serial.print("icon ");   Serial.println(Forecast.p0icon);   
+    Serial.print("short ");  Serial.println(Forecast.p0short);  
+    
+    char FcstTime[50];
+    sprintf(FcstTime, "%02d:%02d", rtc.getHours(), rtc.getMinutes());
+    
+    Serial.print("Pulled ");                Serial.print(FcstTime);
+    Serial.print(" | Updated ");            Serial.println(FcstStamp);
+    Serial.print(p0); Serial.print(" | ");  Serial.println(p1);   
+    Serial.print(p2); Serial.print(" | ");  Serial.println(p3);
+    Serial.print(p4); Serial.print(" | ");  Serial.println(p5);
+  #endif
 }
 
 void statusLine() {       // ======================== STATUS LINE ================= //
-  
-  // Serial.println("StatusLine");
-  
-  int firstl = 12;
-  int lastl = 12;
-  
-  // ------------------------------------- CLEAR AREA ----------------------------- //
-  
-  tft.fillRect(0,LineNu[firstl]-LINE,tft.width(),LineNu[lastl],BGROUND);
+  int qual        = 2 * (WiFi.RSSI() + 100);                 // signal strength in %
+  int xstart      = MARGIN;
+  int lineH       = SLINE - 4;                               // Text line height
+  int ystart      = tft.height() - lineH - MARGIN;           // graphic vertical pos
+  int tline       = tft.height() - MARGIN;                   // text vertical pos
+  int bars        = 4;                                       // number of bars
+  int barG        = 2;                                       // gap between bars
+  int barW        = 6;                                       // bar width
+  int barSpace    = barG + barW;
+  int iconW       = (barW + barG) * bars;                    // icon width
 
-  int hour12;
-  bool pm;
-  convertTime(rtc.getHours(), TIME24, &hour12, &pm);
-  char stat[80];
-  IPAddress ip = WiFi.localIP();
-  sprintf(stat, "%s %d.%d.%d.%d %ddBm %02d/%02d/%02d %d:%02d:%02d%s %s",
-          WiFi.SSID(), ip[0], ip[1], ip[2], ip[3], WiFi.RSSI(), rtc.getMonth(), 
-          rtc.getDay(), rtc.getYear(), hour12, rtc.getMinutes(), rtc.getSeconds(), 
-          AMPM[pm], TIMEZONE);
-
-  if (WiFi.RSSI() < -70) {
-    tft.setFont(&FreeSans9pt7b);
-    tft.setTextColor(MAGENTA);
-    tft.setCursor(MARGIN, LineNu[firstl]);
-    tft.print(stat);
-    return;
+  bool conn;
+  IPAddress ip    = WiFi.localIP();
+ 
+  if(qual < 45) {                // bar 1
+    conn = false;
+            tft.fillRect(xstart, ystart, barW, lineH, YELLOW);
+            tft.fillRect(xstart + barSpace, ystart, barW, lineH, BGROUND);
+            tft.fillRect(xstart + (barSpace * 2), ystart, barW, lineH, BGROUND);
+            tft.fillRect(xstart + (barSpace * 3), ystart, barW, lineH, BGROUND);
   }
+  if(qual >= 45) {               // bar 2
+    conn = true;
+            tft.fillRect(xstart, ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + barSpace, ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + (barSpace * 2), ystart, barW, lineH, BGROUND);
+            tft.fillRect(xstart + (barSpace * 3), ystart, barW, lineH, BGROUND);
+  }
+  if(qual >= 70) {               // bar 3
+            tft.fillRect(xstart, ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + barSpace, ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + (barSpace * 2), ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + (barSpace * 3), ystart, barW, lineH, BGROUND);
+  }
+  if(qual >= 90) {               // bar 4
+            tft.fillRect(xstart, ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + barSpace, ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + (barSpace * 2), ystart, barW, lineH, GREEN);
+            tft.fillRect(xstart + (barSpace * 3), ystart, barW, lineH, GREEN);
+  }
+  
+  char cStat[80]; sprintf(cStat, "%s Quality %d%% RSSI %ddBm %s %d.%d.%d.%d", 
+         CONNSTAT[conn], qual, WiFi.RSSI(), WiFi.SSID(), ip[0], ip[1], ip[2], ip[3]);
+
+  if (qual >= 45) return;
+
+  tft.fillRect(xstart + iconW + MARGIN, ystart, tft.width(), 
+                                    lineH + MARGIN, BGROUND);         // clear screen
+  tft.setCursor(xstart + iconW + MARGIN, tline);
   tft.setFont(&FreeSans9pt7b);
   tft.setTextColor(FGROUND);
-  tft.setCursor(MARGIN, LineNu[firstl]);
-  tft.print(stat);
+  tft.print(cStat);
 }
+
+/*
+void renderBattery() {       // ================== RENDER BATTERY ================= //
+  int firstl = 12;    int lastl = 12;         // start and end lines
+  int xstart = MARGIN;                        // horizontal placement
+  int ystart = LineNu[firstl];                // vertical placement
+  int icon = 18;                              // icon width
+  int bar = (icon - 6) / 3;                   // bar width
+  int sensorValue = analogRead(ADC_BATTERY);
+
+  float voltage = sensorValue * (4.3 / 1023.0);         // Convert reading to voltage
+
+  tft.fillRect(xstart, LineNu[firstl], icon, SLINE, BGROUND);         // clear screen
+
+  // draw battery icon
+  tft.drawLine (xstart+1,      ystart,   xstart+1+icon-4, ystart,   FGROUND);
+  tft.drawLine (xstart,        ystart+1, xstart,          ystart+5, FGROUND);
+  tft.drawLine (xstart+icon-1, ystart+2, xstart+icon-1,   ystart+4, FGROUND);
+  tft.drawPixel(xstart+icon-2, ystart+1, FGROUND);
+  tft.drawPixel(xstart+icon-2, ystart+1, FGROUND);
+  tft.drawLine (xstart+1,      ystart+6, xstart+icon-4,   ystart+6, FGROUND);
+  tft.drawPixel(xstart+icon-2, ystart+5, FGROUND);
+  tft.drawPixel(xstart+icon-3, ystart+5, FGROUND);  
+  tft.drawPixel(xstart+icon-3, ystart+6, FGROUND);
+
+  // draw bars
+  if (voltage > 4.26F) tft.fillRect(xstart, ystart, bar*3, 3, GREEN);          // full
+  else if ((voltage <= 4.26F) && (voltage >= 4.1F)) for (uint8_t i = 0; i < 3; i++) {
+    tft.fillRect(xstart + (i * bar), ystart, bar-1, 3, GREEN);               // 3 bars
+  }
+  else if ((voltage < 4.1F) && (voltage >= 3.8F)) for (uint8_t i = 0; i < 2; i++) {
+    tft.fillRect(xstart + (i * bar), ystart, bar-1, 3, YELLOW);              // 2 bars
+  }
+  else if ((_battery < 3.8F) && (_battery >= 3.4F)) {                         // 1 bar
+    tft.fillRect(xstart, ystart, bar-1, 3, MAGENTA);
+  }
+}
+*/
 
