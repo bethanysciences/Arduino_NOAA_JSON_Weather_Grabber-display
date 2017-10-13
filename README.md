@@ -31,11 +31,9 @@ For LTE/GSM connections
 Written in C++ for the Arduino, Particle and Atmel Studio 7 ecosystems  
 <img src="img/logoArduino.svg" width="10%"> https://www.arduino.cc  
 
-<img src="img/logoParticle.png" width="20%">
-https://www.particle.io  
+<img src="img/logoParticle.png" width="20%">https://www.particle.io  
 
-<img src="img/logoAtmel.svg" width="15%">
-http://www.atmel.com/microsite/atmel-studio/
+<img src="img/logoAtmel.svg" width="15%">http://www.atmel.com/microsite/atmel-studio/
 
 
 These projects are open source under the following Licenses
@@ -122,14 +120,21 @@ Contributed libraries
     - sout  destination of output buffer (must be large enough)  
 - lib/WiFiCreds.h for credentials designating WiFi network SSID and password parameters, alter for your particulars  
       ```
-        /*-----------------------------------------------------*
-        PRIVATE WIFI Credentials
-        for ATMEL series 32bit SAMD21 CPUs
-        © 2017 Bob Smith https://github.com/bethanysciences
-        MIT license
-        *------------------------------------------------------*/
-        char ssid[] = "iotworld";     // your network SSID (name)
-        char pass[] = "iotworld";     // your network password
+        /*-----------------------------------------------------*  
+        
+        PRIVATE WIFI Credentials  
+        
+        for ATMEL series 32bit SAMD21 CPUs  
+        
+        © 2017 Bob Smith https://github.com/bethanysciences  
+        
+        MIT license  
+        
+        *------------------------------------------------------*/  
+        
+        char ssid[] = "iotworld";     // your network SSID (name)  
+        
+        char pass[] = "iotworld";     // your network password  
       ```
 - lib/wxConversions.h library of useful weather conversion functions
   - Celc > Fahr ```double c2f(double [temp °celcius])``` returns temperature in °fahrenheit as double  
