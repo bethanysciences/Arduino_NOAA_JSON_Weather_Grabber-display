@@ -82,7 +82,12 @@ Components used and tested integrations
 
 File and Library Structure
 ----------------------  
-- console.cpp (or console.ino for Arduino IDE) code base for most functions.
+- console.cpp (or console.ino for Arduino IDE) code base for most functions.  
+
+- [/icons](https://github.com/bethanysciences/console/tree/master/icons) referenced weather icons as 58x58 bmp files
+
+Public libraries   
+
 - [WiFi101.h](www.arduino.cc/en/Reference/WiFi101) for integrated ATMEL ATSAMW25 wifi functions  
 - [RTCZero.h](arduino.cc/en/Reference/RTC) for ATMEL SAMD21 time functions  
 - [ArduinoHttpClient.h](https://github.com/arduino-libraries/ArduinoHttpClient) ATMEL ARM library used for HTTP (GET, POST, PUT, DELETE) web server requests and WebSocket servers message exchange.
@@ -99,31 +104,34 @@ File and Library Structure
 - [Adafruit_LEDBackpack.h](github.com/adafruit/Adafruit-LED-Backpack-Library) for the HX285 low level i2c 7-segment led functions  
 - [Adafruit_GFX.h](github.com/adafruit/Adafruit-GFX-Library) for universal display driver functions  
   - Fonts/FreeSans9pt7b.h font included with Adafruit-GFX-Library  
-  - Fonts/FreeSans12pt7b.h font included with Adafruit-GFX-Library   
-- WiFiCreds.h for credentials designating WiFi network SSID and password parameters, alter for your particulars  
-  ```
-    /*-----------------------------------------------------*
-    PRIVATE WIFI Credentials
-    for ATMEL series 32bit SAMD21 CPUs
-    © 2017 Bob Smith https://github.com/bethanysciences
-    MIT license
-    *------------------------------------------------------*/
-    char ssid[] = "iotworld";     // your network SSID (name)
-    char pass[] = "iotworld";     // your network password
-  ```
-- convertTime.h timezone and 12/24 hr conversion  
+  - Fonts/FreeSans12pt7b.h font included with Adafruit-GFX-Library  
+
+Contributed libraries  
+
+- lib/convertTime.h timezone and 12/24 hr conversion  
   ```convertTime(24hour, TIME24, &hour, &AorP)```
   - 24hour as INT input hour in 24 hour format  
   - TIME24 as BOOL output type (y=24 hour, n= 12 hour)  
   - returns hour as INT output hour converted to 12 or 24 hour  
   - returns AorP as AM or PM (if 12 hour selected) 0 = AM, 1 = PM  
-- dtostrf.h Convert float to string as avr-libc sprintf does not format floats  
+- lib/dtostrf.h Convert float to string as avr-libc sprintf does not format floats  
     ```char *dtostrf  (val, width, prec, char *sout)```
     - val  double / float variable  
     - width  string length returned INCLUDING decimal point + sign  
     - prec  number of digits after the deimal point to print  
     - sout  destination of output buffer (must be large enough)  
-- wxConversions.h library of useful weather conversion functions
+- lib/WiFiCreds.h for credentials designating WiFi network SSID and password parameters, alter for your particulars  
+      ```
+        /*-----------------------------------------------------*
+        PRIVATE WIFI Credentials
+        for ATMEL series 32bit SAMD21 CPUs
+        © 2017 Bob Smith https://github.com/bethanysciences
+        MIT license
+        *------------------------------------------------------*/
+        char ssid[] = "iotworld";     // your network SSID (name)
+        char pass[] = "iotworld";     // your network password
+      ```
+- lib/wxConversions.h library of useful weather conversion functions
   - Celc > Fahr ```double c2f(double [temp °celcius])``` returns temperature in °fahrenheit as double  
   - Fahr > Celc ```double f2c(double [temp °fahrenheit``` returns temperature in °celcius
   - Humidity ```double rh(double [dew point °celc], double [temp °celc])``` returns % relative humidity as double
@@ -149,7 +157,7 @@ File and Library Structure
     - fitz = [Fitzpatrick skin type (0-32)](https://www.ncbi.nlm.nih.gov/pubmed/20682135)
     - spf =  Sun Protection Factor value of applied sunblock
     - returns minutes to Min Erythemal Dose (MED) sunburn as integer
-  - Parse and extract elements from XML   
+- lib/xmlTakeParam.h Parse and extract elements from XML   
     ```string xmlTakeParam(String inStr, String needParam)```
     - inStr input string e.g. ```<temp_c>30.6</temp_c>```
     - needParam parameter sought e.g. ```temp_c```
