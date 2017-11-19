@@ -31,11 +31,9 @@ For LTE/GSM connections
 Written in C++ for the Arduino, Particle and Atmel Studio 7 ecosystems  
 <img src="img/logoArduino.svg" width="10%"> https://www.arduino.cc  
 
-<img src="img/logoParticle.png" width="20%">
-https://www.particle.io  
+<img src="img/logoParticle.png" width="20%">https://www.particle.io  
 
-<img src="img/logoAtmel.svg" width="15%">
-http://www.atmel.com/microsite/atmel-studio/
+<img src="img/logoAtmel.svg" width="15%">http://www.atmel.com/microsite/atmel-studio/
 
 
 These projects are open source under the following Licenses
@@ -70,15 +68,15 @@ http://api.wunderground.com/api/<KEY>/conditions/ forecast/q/PDK.json
 
 Components used and tested integrations
 --------------------------------------
-- [Arduino MKR1000 for WiFi](https://store.arduino.cc/usa/arduino-mkr1000)
-  - Substitutes include [Adafruit Feather M0 WIFI](https://www.adafruit.com/product/3010) or other combinations
-- IN PROCESS Particle Electron GSM [Particle Electron](https://www.particle.io/products/hardware/electron-cellular-dev-kit)
-- [Adafruit HXD8357D 3.5" TFT 320x480 + Touchscreen](https://www.adafruit.com/product/2050) Breakout Board w/MicroSD Socket for graphical weather display
-- [Adafruit HT16K33 I2C multiplexer-based 0.56" 4-Digit 7-Segment Display Red](https://www.adafruit.com/product/878) for high temperature
-- [Adafruit HT16K33 I2C multiplexer-based 0.56" 4-Digit 7-Segment Display Green](https://www.adafruit.com/product/880) for current temperature
-- [Adafruit HT16K33 I2C multiplexer-based 0.56" 4-Digit 7-Segment Display Blue](https://www.adafruit.com/product/881) for low temperature
-- [Adafruit HT16K33 I2C multiplexer-based 1.2" 4-Digit 7-Segment Display Yellow](https://www.adafruit.com/product/1269) for time display
-- Li-Po single cell, 3.7V, 700mAh minimum [example link](https://www.adafruit.com/product/258)
+- Arduino [MKR1000 for WiFi](https://store.arduino.cc/usa/arduino-mkr1000)
+- Adafruit [Feather M0 WIFI](https://www.adafruit.com/product/3010)
+- IN PROCESS Particle [Electron](https://www.particle.io/products/hardware/electron-cellular-dev-kit)
+- Adafruit [HXD8357D 3.5" TFT 320x480 + Touchscreen](https://www.adafruit.com/product/2050) Breakout Board w/MicroSD Socket for graphical weather display
+- Adafruit [HT16K33 I2C multiplexer-based 0.56" 4-Digit 7-Segment Display Red](https://www.adafruit.com/product/878) for high temperature
+- Adafruit [HT16K33 I2C multiplexer-based 0.56" 4-Digit 7-Segment Display Green](https://www.adafruit.com/product/880) for current temperature
+- Adafruit [HT16K33 I2C multiplexer-based 0.56" 4-Digit 7-Segment Display Blue](https://www.adafruit.com/product/881) for low temperature
+- Adafruit [HT16K33 I2C multiplexer-based 1.2" 4-Digit 7-Segment Display Yellow](https://www.adafruit.com/product/1269) for time display
+- [Li-Po single cell, 3.7V, 700mAh minimum](https://www.adafruit.com/product/258)
 
 File and Library Structure
 ----------------------  
@@ -121,16 +119,17 @@ Contributed libraries
     - prec  number of digits after the deimal point to print  
     - sout  destination of output buffer (must be large enough)  
 - lib/WiFiCreds.h for credentials designating WiFi network SSID and password parameters, alter for your particulars  
-      ```
-        /*-----------------------------------------------------*
-        PRIVATE WIFI Credentials
-        for ATMEL series 32bit SAMD21 CPUs
-        © 2017 Bob Smith https://github.com/bethanysciences
-        MIT license
-        *------------------------------------------------------*/
-        char ssid[] = "iotworld";     // your network SSID (name)
-        char pass[] = "iotworld";     // your network password
-      ```
+```
+/*-----------------------------------------------------*  
+   PRIVATE WIFI Credentials  
+   for ATMEL series 32bit SAMD21 CPUs  
+   © 2017 Bob Smith https://github.com/bethanysciences  
+   MIT license  
+*------------------------------------------------------*/  
+   char ssid[] = "iotworld";  // your network SSID (name)  
+   char pass[] = "iotworld";  // your network password  
+```  
+
 - lib/wxConversions.h library of useful weather conversion functions
   - Celc > Fahr ```double c2f(double [temp °celcius])``` returns temperature in °fahrenheit as double  
   - Fahr > Celc ```double f2c(double [temp °fahrenheit``` returns temperature in °celcius
@@ -140,7 +139,7 @@ Contributed libraries
     ```double p2h(double pa)```
   - Dew Point in °Celsius or °Fahrenheit  
     ```double dp(double temp, int rh)```
-    - temp = °Celsius or °Fahrenheit],
+    - temp = °Celsius or °Fahrenheit]
     - rh = % relative humidity
   - Calc Heat Index temperature °Celsius or °Fahrenheit  
     ```double hi(double temp, int rh, bool c)```
