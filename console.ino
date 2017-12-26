@@ -1,6 +1,14 @@
 /*----------------------------------------------------------------------------------*
   Weather and Information Console
 
+  Verify   WiFi.setPins(8,7,4,2) for Adafruit Feather M0 WiFi
+           api.weather.gov:443     ssl certificate added via WiFi101 updater
+           UTCOFFSET = -4          set (EDT 2nd sun mar | EST 1st sun NOV)
+           TIMEZONE  = "EDT"       timezone lables
+           FCSTLAT   = "33.8774"   station KPDK NOAA forecast v3 pull
+           FCSTLON   = "-84.3046"
+           WiFi credentials updated in file /lib/WiFiCreds.h
+
   For avr-libc ATMEL series 32bit SAMD21 CPUs e.g. Arduino MKR1000
   © 2017 Bob Smith https://github.com/bethanysciences/console
   MIT license
@@ -221,7 +229,7 @@ void setup() {            // ===================== SETUP =======================
     Serial.print("TFT height "); Serial.println(tft.height());
     Serial.print("TFT Lines ");  Serial.println(tft.height() / LINE);
   #endif
-  
+
   // ------------------------------------- WIFI SETUP ----------------------------- //
 
   tft.print("connect to >");    tft.print(ssid);
@@ -231,24 +239,24 @@ void setup() {            // ===================== SETUP =======================
     delay(500);
   }
   tft.print("> connected ");    tft.println();
-  
+
   digitalWrite(LED_BUILTIN, HIGH);          // lite onboard LED to indicate connection
 
   // ------------------------------------- SET CLOCK ------------------------------ //
-  
+
   rtc.begin();
   unsigned long epoch;
 
   tft.setFont(&FreeSans9pt7b);
   tft.setTextColor(FGROUND);
   tft.print("Time (epoch) ");       tft.println(epoch);
-  
+
   while (epoch == 0) {
     epoch = WiFi.getTime();
     tft.print(".");
     delay(500);
   }
-  
+
   epoch = epoch + UTCEPOCH;
 
   rtc.setEpoch(epoch);
@@ -269,16 +277,16 @@ void setup() {            // ===================== SETUP =======================
   #endif
 
   // ------------------------------------- SET TIMERS ----------------------------- //
-  
+
   timer.setInterval(SEC * 1,  cycleColon);
   timer.setInterval(SEC * 5, statusLine);
   timer.setInterval(MIN * 1,  renderClock);
   timer.setInterval(MIN * 10, NOAAmetar);
   timer.setInterval(MIN * 30, NOAAForecast);
-  statusLine();  
-  renderClock(); 
-  NOAAmetar();  
-  NOAAForecast(); 
+  statusLine();
+  renderClock();
+  NOAAmetar();
+  NOAAForecast();
   renderClock();
 }
 
@@ -287,17 +295,17 @@ void loop() {             // ======================== LOOP =====================
 }
 
 void cycleColon() {       // ======================== COLON ======================= //
-  
+
   // Serial.println("cycleColon");
-  
+
   BLINKCOLON = !BLINKCOLON;
   ClockDisp.drawColon(BLINKCOLON);
   ClockDisp.writeDisplay();
 }
 void renderClock() {      // ======================== CLOCK DISPLAY =============== //
-  
+
   // Serial.println("renderClock");
-  
+
   int hour;
   bool AorP;
   convertTime(rtc.getHours(), TIME24, &hour, &AorP);
@@ -309,13 +317,13 @@ void renderClock() {      // ======================== CLOCK DISPLAY ============
   ClockDisp.writeDigitNum(3, rtc.getMinutes() / 10);
   ClockDisp.writeDigitNum(4, rtc.getMinutes() % 10);
   ClockDisp.writeDisplay();
-  
+
   /* -------------------------------- DEBUG ------------------------------ //
-  
+
   char ClockTime[50];
   sprintf(ClockTime, "%d:%02d%s", hour, rtc.getMinutes(), AMPM[AorP]);
   Serial.print("Time   "); Serial.println(ClockTime);
-  
+
   // -------------------------------- DEBUG ------------------------------ */
 }
 
@@ -330,7 +338,7 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   String response = xml.responseBody();
 
   // ------------------------------------- PARSE ---------------------------------- //
-  
+
   Current.metar         = xmlTakeParam(response, "raw_text");
   Current.obstimeUTC    = xmlTakeParam(response, "observation_time");
   Current.tempC         = xmlTakeParam(response, "temp_c").toInt();
@@ -340,9 +348,9 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   Current.visibilitySM  = xmlTakeParam(response, "visibility_statute_mi").toInt();
   double altim_in_hg    = xmlTakeParam(response, "altim_in_hg").toDouble();
   dtostrf(altim_in_hg, 5, 2, Current.altSettingHG);
-  
+
   #ifdef SERIAL_DEBUG   // --:--:--:--:--:--:--:--DEBUG :--:--:--:--:--:--:--:--:-- //
-    Serial.print("Code ");          Serial.print(code); 
+    Serial.print("Code ");          Serial.print(code);
     Serial.print("Length ");        Serial.println(len);
     Serial.print("Body ");          Serial.println(response);
     Serial.print("METAR --> ");     Serial.println(Current.metar );
@@ -354,7 +362,7 @@ void NOAAmetar() {        // ======================== CURRENT ==================
     Serial.print("visibilitySM ");  Serial.println(Current.visibilitySM);
     Serial.print("altSettingHG ");  Serial.println(Current.altSettingHG);
   #endif
-  
+
   // ------------------------------------- PARSE TIME STAMP ----------------------- //
   int firstDash    = Current.obstimeUTC .indexOf("-");
   int secondDash   = Current.obstimeUTC .lastIndexOf("-");
@@ -374,21 +382,21 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   int date_utc     = dateStr.toInt();
   int hour_utc     = hourStr.toInt();
   hour_utc        += UTCOFFSET;                         // TZ offset adjust
-  if (hour_utc < 0) { 
-    hour_utc += 24; 
-    date_utc -= 1; 
+  if (hour_utc < 0) {
+    hour_utc += 24;
+    date_utc -= 1;
   }
-  else if (hour_utc > 23) { 
-    hour_utc -= 24; 
-    date_utc -= 1; 
+  else if (hour_utc > 23) {
+    hour_utc -= 24;
+    date_utc -= 1;
   }
   else if (hour_utc == 0) hour_utc += 12;
-  
+
   Current.pm = false;
   if (!TIME24) {                                         // 12/24 hour adjust
-    if (hour_utc >= 12) { 
-      hour_utc -= 12; 
-      Current.pm = true; 
+    if (hour_utc >= 12) {
+      hour_utc -= 12;
+      Current.pm = true;
     }
   }
   Current.hour      = hour_utc;
@@ -399,19 +407,19 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   // ------------------------------------- RENDER --------------------------------- //
 
   char CurrStamp[50];
-  sprintf(CurrStamp, "Current as of: %d/%d/%d %d:%2d%s",  
-                      Current.month, Current.date, Current.year, 
+  sprintf(CurrStamp, "Current as of: %d/%d/%d %d:%2d%s",
+                      Current.month, Current.date, Current.year,
                       Current.hour, Current.minute, AMPM[Current.pm]);
 
 
-  char CurrtempF[50]; sprintf(CurrtempF, "Temperature %02d°F", 
+  char CurrtempF[50]; sprintf(CurrtempF, "Temperature %02d°F",
                                                               Current.tempF);
-  char CurrdwptF[50]; sprintf(CurrdwptF, "Dew Point %02d°F", 
+  char CurrdwptF[50]; sprintf(CurrdwptF, "Dew Point %02d°F",
                                                           Current.dewpointF);
   char Currbaro[50];  sprintf(Currbaro, "Barometer %s""hg", Current.altSettingHG);
   char Currwind[50];  sprintf(Currwind, "Wind %dKTS %03ddeg",
                                    Current.windspeedKTS, Current.winddirDeg);
-  char Currvisi[50];  sprintf(Currvisi, "Visibility %d Miles", 
+  char Currvisi[50];  sprintf(Currvisi, "Visibility %d Miles",
                                                        Current.visibilitySM);
 
   // ------------------------------------- WRITE TFT ------------------------------ //
@@ -425,14 +433,14 @@ void NOAAmetar() {        // ======================== CURRENT ==================
 
   tft.setFont(&FreeSans12pt7b);
   tft.setTextColor(FGROUND);
-  
+
   tft.setCursor(MARGIN,          LineNu[firstl + 1]); tft.print(CurrdwptF);
   tft.setCursor(MARGIN + CENTER, LineNu[firstl + 1]); tft.print(Currbaro);
   tft.setCursor(MARGIN ,         LineNu[firstl + 2]); tft.print(Currwind);
   tft.setCursor(MARGIN + CENTER, LineNu[firstl + 2]); tft.print(Currvisi);
-  
+
   // ------------------------------------- WRITE LED ------------------------------ //
-  
+
   if (Current.tempF > 99) {
     CTempDisp.writeDigitNum(0, (Current.tempF / 100));
     CTempDisp.writeDigitNum(1, (Current.tempF / 10));
@@ -448,13 +456,13 @@ void NOAAmetar() {        // ======================== CURRENT ==================
   CTempDisp.writeDisplay();
 
   #ifdef SERIAL_DEBUG   // --:--:--:--:--:--:--:--DEBUG :--:--:--:--:--:--:--:--:-- //
-    Serial.print(" ");    Serial.print(CurrtempF);  
+    Serial.print(" ");    Serial.print(CurrtempF);
     Serial.print(" ");    Serial.print(CurrdwptF);
     Serial.print(" ");    Serial.print(Currbaro);
-    Serial.print(" ");    Serial.print(Currwind); 
-    Serial.print(" ");    Serial.println(Currvisi); 
+    Serial.print(" ");    Serial.print(Currwind);
+    Serial.print(" ");    Serial.println(Currvisi);
 
-    char DCurrStamp[50]; sprintf(DCurrStamp, "%2d:%02d%s", Current.hour, 
+    char DCurrStamp[50]; sprintf(DCurrStamp, "%2d:%02d%s", Current.hour,
                                                     Current.minute, AMPM[Current.pm]);
     int cchour;
     bool pm;
@@ -470,8 +478,8 @@ void NOAAmetar() {        // ======================== CURRENT ==================
     Serial.print("wspd");                 Serial.print("\t");
     Serial.print("wdir");                 Serial.print("\t");
     Serial.println("visi");
-  
-    Serial.print("             ");        Serial.print("\t");  
+
+    Serial.print("             ");        Serial.print("\t");
     Serial.print(TimeStamp);              Serial.print("\t");
     Serial.print(DCurrStamp);             Serial.print("\t");
     Serial.print(Current.tempC);          Serial.print("\t");
@@ -480,7 +488,7 @@ void NOAAmetar() {        // ======================== CURRENT ==================
     Serial.print(Current.windspeedKTS);   Serial.print("\t");
     Serial.print(Current.winddirDeg);     Serial.print("\t");
     Serial.println(Current.visibilitySM);
-  #endif  
+  #endif
 }
 
 void NOAAForecast() {     // ======================== FORECAST ==================== //
@@ -505,6 +513,7 @@ bool sendRequest() {
   client.println("Connection: close");
   client.println();
 }
+
 bool skipResponseHeaders() {
   char endOfHeaders[] = "\r\n\r\n";
   client.setTimeout(HTTPTimeout);
@@ -512,7 +521,7 @@ bool skipResponseHeaders() {
   return ok;
 }
 bool parseForecast() {
-  const size_t bufferSize = JSON_ARRAY_SIZE(14) + JSON_OBJECT_SIZE(4) + 
+  const size_t bufferSize = JSON_ARRAY_SIZE(14) + JSON_OBJECT_SIZE(4) +
                   JSON_OBJECT_SIZE(7) + 14*JSON_OBJECT_SIZE(13) + 8350;
   DynamicJsonBuffer jsonBuffer(bufferSize);
   JsonObject& root = jsonBuffer.parseObject(client);
@@ -524,8 +533,8 @@ bool parseForecast() {
   JsonObject& _context  = root["@context"];
    Forecast.generated   = root["generatedAt"];
   JsonArray& periods    = root["periods"];
-  JsonObject& periods0  = periods[0];   
-   Forecast.p0name      = periods0["name"];  
+  JsonObject& periods0  = periods[0];
+   Forecast.p0name      = periods0["name"];
  const char* temphold0  = periods0["temperature"];
    Forecast.p0tempC     = atoi(temphold0);
    Forecast.p0icon      = periods0["icon"];
@@ -559,10 +568,10 @@ bool parseForecast() {
  const char* temphold5  = periods5["temperature"];
    Forecast.p5tempC     = atoi(temphold5);
    Forecast.p5icon      = periods5["icon"];
-   Forecast.p5short     = periods5["shortForecast"];   
+   Forecast.p5short     = periods5["shortForecast"];
 
   // ------------------------------------- PARSE TIME STAMP ----------------------- //
-  
+
   String stamp(Forecast.generated);
   int firstDash    = stamp.indexOf("-");
   int secondDash   = stamp.lastIndexOf("-");
@@ -580,31 +589,31 @@ bool parseForecast() {
   int date_utc     = dateStr.toInt();
   int hour_utc     = hourStr.toInt();
   hour_utc        += UTCOFFSET;                              // TZ offset adjust
-  if (hour_utc < 0) { 
-    hour_utc += 24; 
-    date_utc -= 1; 
+  if (hour_utc < 0) {
+    hour_utc += 24;
+    date_utc -= 1;
   }
-  else if (hour_utc > 23) { 
-    hour_utc -= 24; 
-    date_utc -= 1; 
+  else if (hour_utc > 23) {
+    hour_utc -= 24;
+    date_utc -= 1;
   }
   else if (hour_utc == 0) hour_utc += 12;
-  
+
   Forecast.pm = false;
   if (!TIME24) {                                              // 12/24 hour adjust
-    if (hour_utc >= 12) { 
-      hour_utc -= 12; 
-      Forecast.pm = true; 
+    if (hour_utc >= 12) {
+      hour_utc -= 12;
+      Forecast.pm = true;
     }
   }
   Forecast.hour   = hour_utc;
   Forecast.date   = date_utc;
 
   // ------------------------------------- RENDER FORECAST ------------------------ //
-  
+
   char FcstStamp[50];
-  sprintf(FcstStamp, "Forecast as of: %d/%d/%d %d:%2d%s",  
-                      Forecast.month, Forecast.date, Forecast.year, 
+  sprintf(FcstStamp, "Forecast as of: %d/%d/%d %d:%2d%s",
+                      Forecast.month, Forecast.date, Forecast.year,
                       Forecast.hour, Forecast.minute, AMPM[Forecast.pm]);
   char p0[100];
   sprintf(p0,"%s %d %s", Forecast.p0name, Forecast.p0tempC, Forecast.p0short);
@@ -616,7 +625,7 @@ bool parseForecast() {
   sprintf(p3,"%s %d %s", Forecast.p3name, Forecast.p3tempC, Forecast.p3short);
   char p4[100];
   sprintf(p4,"%s %d %s", Forecast.p4name, Forecast.p4tempC, Forecast.p4short);
-  char p5[100]; 
+  char p5[100];
   sprintf(p5,"%s %d %s", Forecast.p5name, Forecast.p5tempC, Forecast.p5short);
 
   // ------------------------------------- WRITE TFT ------------------------------ //
@@ -638,7 +647,7 @@ bool parseForecast() {
   // ------------------------------------- WRITE LEDS ----------------------------- //
 
   int LTemp, HTemp;
-  
+
   if (Forecast.p0tempC <= Forecast.p1tempC) {
     LTemp = Forecast.p0tempC;
     HTemp = Forecast.p1tempC;
@@ -646,7 +655,7 @@ bool parseForecast() {
     LTemp = Forecast.p1tempC;
     HTemp = Forecast.p0tempC;
   }
-  
+
   if (LTemp > 99) {
     LTempDisp.writeDigitNum(0, (LTemp / 100));
     LTempDisp.writeDigitNum(1, (LTemp / 10));
@@ -676,15 +685,15 @@ bool parseForecast() {
     Serial.println(client);
     Serial.print("Pero0 ");  Serial.println(Forecast.p0name);
     Serial.print("Temp ");   Serial.println(Forecast.p0tempC);
-    Serial.print("icon ");   Serial.println(Forecast.p0icon);   
-    Serial.print("short ");  Serial.println(Forecast.p0short);  
-    
+    Serial.print("icon ");   Serial.println(Forecast.p0icon);
+    Serial.print("short ");  Serial.println(Forecast.p0short);
+
     char FcstTime[50];
     sprintf(FcstTime, "%02d:%02d", rtc.getHours(), rtc.getMinutes());
-    
+
     Serial.print("Pulled ");                Serial.print(FcstTime);
     Serial.print(" | Updated ");            Serial.println(FcstStamp);
-    Serial.print(p0); Serial.print(" | ");  Serial.println(p1);   
+    Serial.print(p0); Serial.print(" | ");  Serial.println(p1);
     Serial.print(p2); Serial.print(" | ");  Serial.println(p3);
     Serial.print(p4); Serial.print(" | ");  Serial.println(p5);
   #endif
@@ -704,7 +713,7 @@ void statusLine() {       // ======================== STATUS LINE ==============
 
   bool conn;
   IPAddress ip    = WiFi.localIP();
- 
+
   if(qual < 45) {                // bar 1
     conn = false;
             tft.fillRect(xstart, ystart, barW, lineH, YELLOW);
@@ -731,13 +740,13 @@ void statusLine() {       // ======================== STATUS LINE ==============
             tft.fillRect(xstart + (barSpace * 2), ystart, barW, lineH, GREEN);
             tft.fillRect(xstart + (barSpace * 3), ystart, barW, lineH, GREEN);
   }
-  
-  char cStat[80]; sprintf(cStat, "%s Quality %d%% RSSI %ddBm %s %d.%d.%d.%d", 
+
+  char cStat[80]; sprintf(cStat, "%s Quality %d%% RSSI %ddBm %s %d.%d.%d.%d",
          CONNSTAT[conn], qual, WiFi.RSSI(), WiFi.SSID(), ip[0], ip[1], ip[2], ip[3]);
 
   if (qual >= 45) return;
 
-  tft.fillRect(xstart + iconW + MARGIN, ystart, tft.width(), 
+  tft.fillRect(xstart + iconW + MARGIN, ystart, tft.width(),
                                     lineH + MARGIN, BGROUND);         // clear screen
   tft.setCursor(xstart + iconW + MARGIN, tline);
   tft.setFont(&FreeSans9pt7b);
@@ -766,7 +775,7 @@ void renderBattery() {       // ================== RENDER BATTERY ==============
   tft.drawPixel(xstart+icon-2, ystart+1, FGROUND);
   tft.drawLine (xstart+1,      ystart+6, xstart+icon-4,   ystart+6, FGROUND);
   tft.drawPixel(xstart+icon-2, ystart+5, FGROUND);
-  tft.drawPixel(xstart+icon-3, ystart+5, FGROUND);  
+  tft.drawPixel(xstart+icon-3, ystart+5, FGROUND);
   tft.drawPixel(xstart+icon-3, ystart+6, FGROUND);
 
   // draw bars
@@ -782,4 +791,3 @@ void renderBattery() {       // ================== RENDER BATTERY ==============
   }
 }
 */
-

@@ -182,7 +182,7 @@ Fcst Forecast;
 void setup() {            // ===================== SETUP ========================== //
   pinMode(LED_BUILTIN, OUTPUT);                       // setup onboard LED
 
-  //  WiFi.setPins(8,7,4,2);                          // for Adafruit Feather M0 WiFi
+  WiFi.setPins(8,7,4,2);                          // for Adafruit Feather M0 WiFi
 
   #ifdef SERIAL_DEBUG   // ----------------------- DEBUG -------------------------- //
     Serial.begin(115200);
@@ -310,7 +310,7 @@ void renderClock() {      // ======================== CLOCK DISPLAY ============
   ClockDisp.writeDigitNum(4, rtc.getMinutes() % 10);
   ClockDisp.writeDisplay();
   
-  /* -------------------------------- DEBUG ------------------------------ //
+  // -------------------------------- DEBUG ------------------------------ //
   
   char ClockTime[50];
   sprintf(ClockTime, "%d:%02d%s", hour, rtc.getMinutes(), AMPM[AorP]);
@@ -782,4 +782,3 @@ void renderBattery() {       // ================== RENDER BATTERY ==============
   }
 }
 */
-
